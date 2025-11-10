@@ -1,0 +1,25 @@
+# Python code directory (not needed for LaTeX)
+code/
+
+# Data directory (not needed for LaTeX)
+data/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+
+# Build log
+compile.log
+
+# Unreferenced bibliography file
+mainNotes.bib
+
+# Generated PDF (can be regenerated)
+main.pdf
+

@@ -1,0 +1,8 @@
+# Placeholder for figures
+# Figures to be added:
+# - energy_vs_cycles.pdf (energy vs. cycles on train and test)
+# - energy_heatmap_train.pdf (energy heatmap on training grid)
+# - energy_heatmap_test.pdf (energy heatmap on testing grid)
+# - parameters_vs_layer.pdf (trained parameters vs. layer number)
+# - chern_vs_p.pdf (Chern number vs. p on test)
+
