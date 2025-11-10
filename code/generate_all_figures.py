@@ -451,6 +451,7 @@ def plot_parameters_vs_layer(res_val=3, p_val=5):
     
     # set x ticks according to the data
     plt.xticks(np.arange(1, p_val + 1))
+    plt.yticks([-np.pi, 0, np.pi], ['$-\\pi$', '$0$', '$\\pi$'])
     plt.xlabel('Layer number $\\ell$', fontsize=FONT_SIZE_LABELS)
     plt.ylabel('Parameter value', fontsize=FONT_SIZE_LABELS)
     plt.legend(fontsize=FONT_SIZE_LEGEND, ncol=2)

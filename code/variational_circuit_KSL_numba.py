@@ -103,20 +103,19 @@ def matrix_multiply_6x6(A, B):
 
 
 @jit(nopython=True, cache=True)
-def create_variational_circuit_numba(strength_durations_array, kx, ky, Delta, num_layers):
+def create_variational_circuit_numba(strength_durations_array, kx, ky, num_layers):
     """
     Numba-optimized variational circuit creation
     
     Args:
         strength_durations_array: 2D array of shape (6, num_layers) where:
-            - Row 0: Jx values
-            - Row 1: Jy values
-            - Row 2: Jz values
-            - Row 3: kappa values
-            - Row 4: g values
-            - Row 5: B values
+            - Row 0: Jx values (unitless, periodic mod 2π, stored as 2×actual, used as actual/2)
+            - Row 1: Jy values (unitless, periodic mod 2π, stored as 2×actual, used as actual/2)
+            - Row 2: Jz values (unitless, periodic mod 2π, stored as 2×actual, used as actual/2)
+            - Row 3: kappa values (unitless, periodic mod 2π, stored as 2×actual, used as actual/2)
+            - Row 4: g values (unitless, periodic mod 2π, stored as 2×actual, used as actual/2)
+            - Row 5: B values (unitless, periodic mod 2π, stored as 2×actual, used as actual/2)
         kx, ky: momentum values
-        Delta: precomputed Delta value (used for kappa term calculation)
         num_layers: number of layers in the circuit
     
     Returns:
@@ -130,43 +129,49 @@ def create_variational_circuit_numba(strength_durations_array, kx, ky, Delta, nu
     cos_ky = np.cos(ky)
     sin_ky = np.sin(ky)
     
+    # Compute Delta_without_kappa = 4*(sin(kx) - sin(ky) + sin(ky-kx)) (kappa-independent)
+    Delta_without_kappa = 4.0 * (sin_kx - sin_ky + np.sin(ky - kx))
+    
     # Apply num_layers layers
+    # All parameters are stored as 2× their actual value (periodic mod 2π)
+    # All parameters are divided by 2 when used in the circuit
     for layer in range(num_layers):
-        # Jx term (trainable)
+        # Jx term (trainable, unitless parameter, periodic mod 2π, stored as 2×actual, use parameter/2 in circuit)
         strength_duration_val = strength_durations_array[0, layer]
-        a_n = np.array([0.0, -2.0*Jx * strength_duration_val, 0.0])
+        a_n = np.array([0.0, -2.0 * (strength_duration_val / 2.0), 0.0])
         U_term = pauli_exponentiation_numba(a_n)
         U_6x6 = np.eye(6, dtype=np.complex128)
         U_6x6[0:2, 0:2] = U_term
         Ud = matrix_multiply_6x6(U_6x6, Ud)
         
-        # Jy term (trainable)
+        # Jy term (trainable, unitless parameter, periodic mod 2π, stored as 2×actual, use parameter/2 in circuit)
         strength_duration_val = strength_durations_array[1, layer]
-        a_n = 2.0*Jy * strength_duration_val * np.array([-sin_kx, -cos_kx, 0.0])
+        a_n = 2.0 * (strength_duration_val / 2.0) * np.array([-sin_kx, -cos_kx, 0.0])
         U_term = pauli_exponentiation_numba(a_n)
         U_6x6 = np.eye(6, dtype=np.complex128)
         U_6x6[0:2, 0:2] = U_term
         Ud = matrix_multiply_6x6(U_6x6, Ud)
         
-        # Jz term (trainable)
+        # Jz term (trainable, unitless parameter, periodic mod 2π, stored as 2×actual, use parameter/2 in circuit)
         strength_duration_val = strength_durations_array[2, layer]
-        a_n = 2.0*Jz * strength_duration_val * np.array([-sin_ky, -cos_ky, 0.0])
+        a_n = 2.0 * (strength_duration_val / 2.0) * np.array([-sin_ky, -cos_ky, 0.0])
         U_term = pauli_exponentiation_numba(a_n)
         U_6x6 = np.eye(6, dtype=np.complex128)
         U_6x6[0:2, 0:2] = U_term
         Ud = matrix_multiply_6x6(U_6x6, Ud)
         
-        # kappa term (trainable)
+        # kappa term (trainable, unitless parameter, periodic mod 2π, stored as 2×actual, use parameter/2 in circuit)
+        # Multiply by Delta_without_kappa to make it kappa-independent
         strength_duration_val = strength_durations_array[3, layer]
-        a_n = np.array([0.0, 0.0, Delta * strength_duration_val])
+        a_n = np.array([0.0, 0.0, (strength_duration_val / 2.0) * Delta_without_kappa])
         U_term = pauli_exponentiation_numba(a_n)
         U_6x6 = np.eye(6, dtype=np.complex128)
         U_6x6[0:2, 0:2] = U_term
         Ud = matrix_multiply_6x6(U_6x6, Ud)
         
-        # g term (trainable)
+        # g term (trainable, unitless parameter, periodic mod 2π, stored as 2×actual, use parameter/2 in circuit)
         strength_duration_val = strength_durations_array[4, layer]
-        a_n = np.array([0.0, -2.0 * strength_duration_val, 0.0])
+        a_n = np.array([0.0, -2.0 * (strength_duration_val / 2.0), 0.0])
         U_term = pauli_exponentiation_numba(a_n)
         U_6x6 = np.eye(6, dtype=np.complex128)
         # Apply to submatrices [[0,2],[0,2]] and [[1,3],[1,3]]
@@ -182,9 +187,9 @@ def create_variational_circuit_numba(strength_durations_array, kx, ky, Delta, nu
         
         Ud = matrix_multiply_6x6(U_6x6, Ud)
         
-        # B term (trainable)
+        # B term (trainable, unitless parameter, periodic mod 2π, stored as 2×actual, use parameter/2 in circuit)
         strength_duration_val = strength_durations_array[5, layer]
-        a_n = np.array([0.0, 2.0 * strength_duration_val, 0.0])
+        a_n = np.array([0.0, 2.0 * (strength_duration_val / 2.0), 0.0])
         U_term = pauli_exponentiation_numba(a_n)
         U_6x6 = np.eye(6, dtype=np.complex128)
         # Apply to submatrices [[2,4],[2,4]] and [[3,5],[3,5]]
@@ -224,11 +229,8 @@ def create_variational_circuit(strength_durations, kx, ky):
     strength_durations_array[4, :] = strength_durations['g']  # g values
     strength_durations_array[5, :] = strength_durations['B']  # B values
     
-    # Get Delta value
-    Delta = get_Delta(kx, ky, kappa)
-    
     # Call Numba-optimized function
-    return create_variational_circuit_numba(strength_durations_array, kx, ky, Delta, p)
+    return create_variational_circuit_numba(strength_durations_array, kx, ky, p)
 
 
 def get_chern_number_from_single_particle_dm(single_particle_dm):

@@ -211,15 +211,15 @@ U_\ell = U_B(\beta_\ell) \, U_g(\gamma_\ell) \, U_{\kappa}(\delta_\ell) \, U_{J_
 
 Each term corresponds to exponentiation of the corresponding Hamiltonian component:
 \begin{itemize}
-\item $U_{J_x}(\alpha_{x,\ell}) = \exp\left(-i \alpha_{x,\ell} \mathcal{J}_x \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in x\text{-bonds}}\sigma_{\mathbf{I}}^{x}\sigma_{\mathbf{J}}^{x}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_x$ bond interactions
-\item $U_{J_y}(\alpha_{y,\ell}) = \exp\left(-i \alpha_{y,\ell} \mathcal{J}_y \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in y\text{-bonds}}\sigma_{\mathbf{I}}^{y}\sigma_{\mathbf{J}}^{y}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_y$ bond interactions  
-\item $U_{J_z}(\alpha_{z,\ell}) = \exp\left(-i \alpha_{z,\ell} \mathcal{J}_z \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in z\text{-bonds}}\sigma_{\mathbf{I}}^{z}\sigma_{\mathbf{J}}^{z}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_z$ bond interactions
-\item $U_{\kappa}(\delta_\ell) = \exp\left(-i \delta_\ell \kappa \sum_{\langle\langle \mathbf{J},\mathbf{K},\mathbf{L}\rangle\rangle}\sigma_{\mathbf{J}}^x\tau_{\mathbf{J}}^z\sigma_{\mathbf{K}}^y\tau_{\mathbf{K}}^z\sigma_{\mathbf{L}}^z\right)$ for the three-spin $\kappa$ term
-\item $U_g(\gamma_\ell) = \exp\left(-i \gamma_\ell \sum_{\mathbf{J}}\tau_{\mathbf{J}}^{x}\right)$ for the system-bath coupling
-\item $U_B(\beta_\ell) = \exp\left(-i \beta_\ell \sum_{\mathbf{J}}s_{\mathbf{J}}\tau_{\mathbf{J}}^{z}\right)$ for the bath Zeeman field, where $s_{\mathbf{J}} = \pm 1$ is the measurement outcome of $\tau^z_{\mathbf{J}}$ from the previous cycle
+\item $U_{J_x}(\alpha_{x,\ell}) = \exp\left(-i (\alpha_{x,\ell}/2) \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in x\text{-bonds}}\sigma_{\mathbf{I}}^{x}\sigma_{\mathbf{J}}^{x}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_x$ bond interactions
+\item $U_{J_y}(\alpha_{y,\ell}) = \exp\left(-i (\alpha_{y,\ell}/2) \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in y\text{-bonds}}\sigma_{\mathbf{I}}^{y}\sigma_{\mathbf{J}}^{y}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_y$ bond interactions  
+\item $U_{J_z}(\alpha_{z,\ell}) = \exp\left(-i (\alpha_{z,\ell}/2) \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in z\text{-bonds}}\sigma_{\mathbf{I}}^{z}\sigma_{\mathbf{J}}^{z}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_z$ bond interactions
+\item $U_{\kappa}(\delta_\ell) = \exp\left(-i (\delta_\ell/2) \sum_{\langle\langle \mathbf{J},\mathbf{K},\mathbf{L}\rangle\rangle}\sigma_{\mathbf{J}}^x\tau_{\mathbf{J}}^z\sigma_{\mathbf{K}}^y\tau_{\mathbf{K}}^z\sigma_{\mathbf{L}}^z\right)$ for the three-spin $\kappa$ term
+\item $U_g(\gamma_\ell) = \exp\left(-i (\gamma_\ell/2) \sum_{\mathbf{J}}\tau_{\mathbf{J}}^{x}\right)$ for the system-bath coupling
+\item $U_B(\beta_\ell) = \exp\left(-i (\beta_\ell/2) \sum_{\mathbf{J}}s_{\mathbf{J}}\tau_{\mathbf{J}}^{z}\right)$ for the bath Zeeman field, where $s_{\mathbf{J}} = \pm 1$ is the measurement outcome of $\tau^z_{\mathbf{J}}$ from the previous cycle
 \end{itemize}
 
-The variational parameters $\{\alpha_{x,\ell}, \alpha_{y,\ell}, \alpha_{z,\ell}, \beta_\ell, \gamma_\ell, \delta_\ell\}_{\ell=1}^p$ are optimized to minimize the energy density in the steady state achieved after multiple cooling cycles.
+The variational parameters $\{\alpha_{x,\ell}, \alpha_{y,\ell}, \alpha_{z,\ell}, \beta_\ell, \gamma_\ell, \delta_\ell\}_{\ell=1}^p$ are all periodic modulo $2\pi$, and are optimized to minimize the energy density in the steady state achieved after multiple cooling cycles.
 
 \section{Training Regimen}
 
