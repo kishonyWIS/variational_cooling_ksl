@@ -314,21 +314,15 @@ In the adiabatic limit, the protocol of Ref.~\cite{Kishony_2025} is able to reac
 
 \begin{figure}
 \begin{centering}
-\includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_heatmap_train.pdf}
-\par\end{centering}
-\caption{\textbf{Energy difference heatmap on the training grid for optimized circuit with $L_{\text{train}} = 18$, $p=5$.} The color scale shows the energy difference from the ground state at each momentum point.}
-\label{fig:energy_heatmap_train}
-\end{figure}
-
-\begin{figure}
-\begin{centering}
+\includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_heatmap_train.pdf}\\
+\vspace{0.2cm}
 \includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_heatmap_test.pdf}
 \par\end{centering}
-\caption{\textbf{Energy difference heatmap on the test grid for optimized circuit with $L_{\text{train}} = 18$, $p=5$.} Red crosses indicate the training grid points for comparison.}
-\label{fig:energy_heatmap_test}
+\caption{\textbf{Energy difference heatmaps for optimized circuit with $L_{\text{train}} = 18$, $p=5$.} (Top) Training grid. (Bottom) Test grid, with red crosses indicating the training grid points for comparison. The color scale shows the energy difference from the ground state at each momentum point. The protocol successfully cools the system across the entire Brillouin zone, with only small residual excitations remaining.}
+\label{fig:energy_heatmap}
 \end{figure}
 
-Fig.~\ref{fig:energy_heatmap_train} and Fig.~\ref{fig:energy_heatmap_test} show the distribution of energy differences in momentum space on the training and test grids, respectively. The protocol successfully cools the system across the entire Brillouin zone, with only small residual excitations remaining.
+Fig.~\ref{fig:energy_heatmap} shows the distribution of energy differences in momentum space on both the training and test grids. The protocol successfully cools the system across the entire Brillouin zone, with only small residual excitations remaining.
 
 \subsection{Optimized Parameters}
 
