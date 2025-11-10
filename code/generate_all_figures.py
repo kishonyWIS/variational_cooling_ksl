@@ -344,7 +344,7 @@ def plot_energy_heatmap(res_val=3, p_val=5, grid_type='train'):
         show_training_points = False
     else:  # test
         n_k_points = 6 * 20  # 120
-        show_training_points = True
+        show_training_points = False
         n_k_points_train = 6 * res_val
     
     # Create grid
