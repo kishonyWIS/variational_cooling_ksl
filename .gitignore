@@ -1,8 +1,12 @@
-# Python code directory (not needed for LaTeX)
-code/
-
-# Data directory (not needed for LaTeX)
-data/
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.nbc
+*.nbi
 
 # LaTeX build artifacts
 *.aux
