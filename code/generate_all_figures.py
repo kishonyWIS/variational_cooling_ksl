@@ -440,8 +440,8 @@ def plot_parameters_vs_layer(res_val=3, p_val=5):
     plt.figure(figsize=FIG_SIZE)
     
     terms = ['Jx', 'Jy', 'Jz', 'kappa', 'g', 'B']
-    labels = ['$\\alpha_{x,\\ell}$ (Jx)', '$\\alpha_{y,\\ell}$ (Jy)', '$\\alpha_{z,\\ell}$ (Jz)', 
-              '$\\delta_\\ell$ ($\\kappa$)', '$\\gamma_\\ell$ (g)', '$\\beta_\\ell$ (B)']
+    labels = ['$\\alpha_{x,\\ell}$ ($J_x$)', '$\\alpha_{y,\\ell}$ ($J_y$)', '$\\alpha_{z,\\ell}$ ($J_z$)', 
+              '$\\delta_\\ell$ ($\\kappa$)', '$\\gamma_\\ell$ ($g$)', '$\\beta_\\ell$ ($B$)']
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
     linestyles = ['-', '-', '-', '-', '-', '-']
     
