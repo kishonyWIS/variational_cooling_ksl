@@ -8,6 +8,7 @@ import time
 import csv
 import sys
 import os
+from interger_chern_number import chern_from_mixed_spdm
 
 # Add project root to path to access root-level dependencies
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -233,14 +234,30 @@ def create_variational_circuit(strength_durations, kx, ky):
     return create_variational_circuit_numba(strength_durations_array, kx, ky, p)
 
 
+def get_k_grid(n_k_points):
+    """Create k-grid from -pi to pi (excluding endpoint) for periodic boundary conditions"""
+    return np.linspace(-np.pi, np.pi, n_k_points, endpoint=False)
+
+
 def get_chern_number_from_single_particle_dm(single_particle_dm):
-    """Calculate Chern number from single-particle density matrix"""
-    dP_dkx = np.diff(single_particle_dm, axis=0)[:,:-1,:,:]
-    dP_dky = np.diff(single_particle_dm, axis=1)[:-1,:,:,:]
-    P = single_particle_dm[:-1,:-1,:,:]
-    integrand = np.zeros(P.shape[0:2],dtype=complex)
-    for i_kx, i_ky in product(range(P.shape[0]), repeat=2):
-        integrand[i_kx,i_ky] = np.trace(P[i_kx,i_ky,:,:] @ (dP_dkx[i_kx,i_ky,:,:] @ dP_dky[i_kx,i_ky,:,:] - dP_dky[i_kx,i_ky,:,:] @ dP_dkx[i_kx,i_ky,:,:]))
+    """Calculate Chern number from single-particle density matrix with periodic boundary conditions"""
+    n_kx, n_ky = single_particle_dm.shape[0], single_particle_dm.shape[1]
+    
+    # Compute derivatives with wrapping for periodic boundary conditions
+    # dP_dkx: difference along kx axis, wrapping from last to first
+    dP_dkx = np.roll(single_particle_dm, -1, axis=0) - single_particle_dm
+    
+    # dP_dky: difference along ky axis, wrapping from last to first
+    dP_dky = np.roll(single_particle_dm, -1, axis=1) - single_particle_dm
+    
+    # Compute integrand for all k-points
+    integrand = np.zeros((n_kx, n_ky), dtype=complex)
+    for i_kx, i_ky in product(range(n_kx), range(n_ky)):
+        P = single_particle_dm[i_kx, i_ky, :, :]
+        dP_dkx_ij = dP_dkx[i_kx, i_ky, :, :]
+        dP_dky_ij = dP_dky[i_kx, i_ky, :, :]
+        integrand[i_kx, i_ky] = np.trace(P @ (dP_dkx_ij @ dP_dky_ij - dP_dky_ij @ dP_dkx_ij))
+    
     return (np.sum(integrand)/(2*np.pi)).imag
 
 
@@ -449,10 +466,14 @@ def simulate_grid_with_analysis(kx_list, ky_list, strength_durations, n_cycles=1
     # Run simulation
     E_diff, single_particle_dm = simulate_grid(kx_list, ky_list, strength_durations, n_cycles, verbose=False)
     
-    # Calculate Chern numbers
-    total_chern_number = get_chern_number_from_single_particle_dm(single_particle_dm)
-    system_chern_number = get_chern_number_from_single_particle_dm(single_particle_dm[:,:,:2,:2])
-    bath_chern_number = get_chern_number_from_single_particle_dm(single_particle_dm[:,:,2:,2:])
+    # # Calculate Chern numbers
+    # total_chern_number = get_chern_number_from_single_particle_dm(single_particle_dm)
+    # system_chern_number = get_chern_number_from_single_particle_dm(single_particle_dm[:,:,:2,:2])
+    # bath_chern_number = get_chern_number_from_single_particle_dm(single_particle_dm[:,:,2:,2:])
+    # # Calculate Chern numbers using exact method
+    total_chern_number = chern_from_mixed_spdm(single_particle_dm)
+    system_chern_number = chern_from_mixed_spdm(single_particle_dm[:,:,:2,:2])
+    bath_chern_number = chern_from_mixed_spdm(single_particle_dm[:,:,2:,2:])
     
     # Calculate average energy density (use final cycle if multiple cycles)
     if n_cycles == 1:
@@ -847,8 +868,8 @@ def evaluate_loaded_parameters(res_val, p_val, parameter_file=None, input_dir=No
         print(f"{'='*60}")
         
         # Create training momentum space grid
-        kx_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
-        ky_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
+        kx_list_train = get_k_grid(n_k_points_train)
+        ky_list_train = get_k_grid(n_k_points_train)
         
         # Evaluate on training grid
         E_diff_train, single_particle_dm_train, total_chern_number_train, system_chern_number_train, \
@@ -868,8 +889,8 @@ def evaluate_loaded_parameters(res_val, p_val, parameter_file=None, input_dir=No
             plot_results(E_diff_train_plot, strength_durations, n_k_points_train, "Training ", show_training_points=False)
         
         # Evaluate on test grid
-        kx_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)[:-1]
-        ky_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)[:-1]
+        kx_list_test = get_k_grid(n_k_points_test)
+        ky_list_test = get_k_grid(n_k_points_test)
         E_diff_test, single_particle_dm_test, total_chern_number_test, system_chern_number_test, \
         bath_chern_number_test, energy_density_test = simulate_grid_with_analysis(
             kx_list_test, ky_list_test, strength_durations, 
@@ -1136,8 +1157,8 @@ def train_variational_circuit():
     print("="*60)
     
     # Create training momentum space grid
-    kx_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
-    ky_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
+    kx_list_train = get_k_grid(n_k_points_train)
+    ky_list_train = get_k_grid(n_k_points_train)
     
     print(f"Training grid: {len(kx_list_train)}x{len(ky_list_train)} = {len(kx_list_train)*len(ky_list_train)} points")
     
@@ -1361,15 +1382,15 @@ def run_progressive_circuit_expansion(output_csv=None, params_output_dir=None,
     # Each res value is completely independent - starts fresh with global optimization for smallest p
     previous_optimized = {}  # key: res, value: (prev_p, optimized_strength_durations)
     
-    kx_list_test = np.linspace(-np.pi, np.pi, n_k_points_test_fixed + 1)[:-1]
-    ky_list_test = np.linspace(-np.pi, np.pi, n_k_points_test_fixed + 1)[:-1]
+    kx_list_test = get_k_grid(n_k_points_test_fixed)
+    ky_list_test = get_k_grid(n_k_points_test_fixed)
 
     for res in res_values:
         # Each res starts fresh - no state carried over from previous res values
         # Generate grids for this res value (they're the same for all p values)
         n_k_points_train_res = 6 * res
-        kx_list_train = np.linspace(-np.pi, np.pi, n_k_points_train_res + 1)[:-1]
-        ky_list_train = np.linspace(-np.pi, np.pi, n_k_points_train_res + 1)[:-1]
+        kx_list_train = get_k_grid(n_k_points_train_res)
+        ky_list_train = get_k_grid(n_k_points_train_res)
         
         for p_val in p_values:
             experiment_count += 1
@@ -1502,8 +1523,8 @@ def main():
     print("\n" + "="*60)
     print("TESTING PHASE")
     print("="*60)
-    kx_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)[:-1]
-    ky_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)[:-1]
+    kx_list_test = get_k_grid(n_k_points_test)
+    ky_list_test = get_k_grid(n_k_points_test)
     E_diff_test, single_particle_dm_test, total_chern_number_test, system_chern_number_test, bath_chern_number_test, energy_density_test = simulate_grid_with_analysis(
         kx_list_test, ky_list_test, optimized_strength_durations, n_cycles_test
     )
@@ -1512,8 +1533,8 @@ def main():
     print("\n" + "="*60)
     print("TRAINING GRID SIMULATION")
     print("="*60)
-    kx_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
-    ky_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
+    kx_list_train = get_k_grid(n_k_points_train)
+    ky_list_train = get_k_grid(n_k_points_train)
     E_diff_train, single_particle_dm_train, total_chern_number_train, system_chern_number_train, bath_chern_number_train, energy_density_train = simulate_grid_with_analysis(
         kx_list_train, ky_list_train, optimized_strength_durations, n_cycles_test
     )
@@ -1524,10 +1545,10 @@ def main():
     print("="*60)
     
     # Create momentum space grids for the analysis
-    kx_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
-    ky_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
-    kx_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)[:-1]
-    ky_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)[:-1]
+    kx_list_train = get_k_grid(n_k_points_train)
+    ky_list_train = get_k_grid(n_k_points_train)
+    kx_list_test = get_k_grid(n_k_points_test)
+    ky_list_test = get_k_grid(n_k_points_test)
     
     # Plot energy density vs cycles for both grids
     cycle_counts, energy_densities_train, energy_densities_test = plot_energy_density_vs_cycles(

@@ -22,6 +22,7 @@ from variational_circuit_KSL_numba import (
     load_optimized_parameters_for_res_p,
     simulate_grid_with_analysis,
     simulate_grid,
+    get_k_grid,
     DATA_DIR,
 )
 
@@ -64,10 +65,10 @@ def plot_energy_vs_cycles(res_val=3, p_val=5, max_cycles=20):
     n_k_points_train = 6 * res_val
     n_k_points_test = 6 * 20  # 120
     
-    kx_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
-    ky_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
-    kx_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)[:-1]
-    ky_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)[:-1]
+    kx_list_train = get_k_grid(n_k_points_train)
+    ky_list_train = get_k_grid(n_k_points_train)
+    kx_list_test = get_k_grid(n_k_points_test)
+    ky_list_test = get_k_grid(n_k_points_test)
     
     # Run simulation for training grid
     print(f"  Running simulation on training grid ({n_k_points_train}x{n_k_points_train}) with {max_cycles} cycles...")
@@ -143,8 +144,8 @@ def plot_energy_vs_p_by_res(res_vals=None, p_vals=None):
     
     # Create test grid (fixed for all res values)
     n_k_points_test = 6 * 20  # 120
-    kx_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)[:-1]
-    ky_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)[:-1]
+    kx_list_test = get_k_grid(n_k_points_test)
+    ky_list_test = get_k_grid(n_k_points_test)
     
     plt.figure(figsize=FIG_SIZE)
     
@@ -153,8 +154,8 @@ def plot_energy_vs_p_by_res(res_vals=None, p_vals=None):
         
         # Create training grid for this res
         n_k_points_train = 6 * res
-        kx_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
-        ky_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)[:-1]
+        kx_list_train = get_k_grid(n_k_points_train)
+        ky_list_train = get_k_grid(n_k_points_train)
         
         # Calculate energy densities for training and test grids
         energy_density_train_list = []
@@ -237,10 +238,9 @@ def plot_chern_vs_p(res_vals=None, p_vals=None):
     import variational_circuit_KSL_numba as vc_module
     
     # Create test grid (fixed for all res values)
-    # include the endpoint because of finite derivative for chern number
     n_k_points_test = 6 * 20  # 120
-    kx_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)
-    ky_list_test = np.linspace(-np.pi, np.pi, n_k_points_test + 1)
+    kx_list_test = get_k_grid(n_k_points_test)
+    ky_list_test = get_k_grid(n_k_points_test)
     
     plt.figure(figsize=FIG_SIZE)
     
@@ -248,10 +248,9 @@ def plot_chern_vs_p(res_vals=None, p_vals=None):
         print(f"Processing res={res}...")
         
         # Create training grid for this res
-        # include the endpoint because of finite derivative for chern number
         n_k_points_train = 6 * res
-        kx_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)
-        ky_list_train = np.linspace(-np.pi, np.pi, n_k_points_train + 1)
+        kx_list_train = get_k_grid(n_k_points_train)
+        ky_list_train = get_k_grid(n_k_points_train)
         
         # Calculate Chern numbers for training and test grids
         system_chern_train = []
@@ -348,8 +347,8 @@ def plot_energy_heatmap(res_val=3, p_val=5, grid_type='train'):
         n_k_points_train = 6 * res_val
     
     # Create grid
-    kx_list = np.linspace(-np.pi, np.pi, n_k_points + 1)[:-1]
-    ky_list = np.linspace(-np.pi, np.pi, n_k_points + 1)[:-1]
+    kx_list = get_k_grid(n_k_points)
+    ky_list = get_k_grid(n_k_points)
     
     # Run simulation (use N_CYCLES_STEADY for convergence)
     print(f"  Running simulation on {grid_name} grid ({n_k_points}x{n_k_points}) with {N_CYCLES_STEADY} cycles...")
@@ -369,8 +368,8 @@ def plot_energy_heatmap(res_val=3, p_val=5, grid_type='train'):
     # Adjust subplot to give more space to the main plot
     plt.subplots_adjust(left=0.15, right=0.85, bottom=0.15, top=0.95)
     
-    kx_coords = np.linspace(-np.pi, np.pi, n_k_points + 1)[:-1]
-    ky_coords = np.linspace(-np.pi, np.pi, n_k_points + 1)[:-1]
+    kx_coords = get_k_grid(n_k_points)
+    ky_coords = get_k_grid(n_k_points)
     
     vmin = 0.0
     vmax = np.max(E_diff_plot)
@@ -493,8 +492,8 @@ def main(res_val=3, p_val=5, res_vals=None, p_vals=None, generate_all=True):
     
     # Generate multi-res figures (if requested)
     if generate_all:
-        plot_energy_vs_p_by_res(res_vals=res_vals, p_vals=p_vals)
         plot_chern_vs_p(res_vals=res_vals, p_vals=p_vals)
+        plot_energy_vs_p_by_res(res_vals=res_vals, p_vals=p_vals)
     
     print("\n" + "="*60)
     print("ALL FIGURES GENERATED SUCCESSFULLY")

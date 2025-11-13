@@ -16,6 +16,10 @@ if project_root not in sys.path:
 
 from translational_invariant_KSL import get_KSL_model, get_Delta, get_f
 
+# Import get_k_grid from variational_circuit_KSL_numba
+sys.path.insert(0, os.path.dirname(__file__))
+from variational_circuit_KSL_numba import get_k_grid
+
 # Model parameters
 kappa = 1.
 Jx = 1.
@@ -94,12 +98,12 @@ def main():
     print("="*60)
     
     # Test grid: same as used in variational_circuit_KSL_numba.py
-    n_k_points_test = 1 + 6 * 20  # 121 points
+    n_k_points_test = 6 * 20  # 120 points
     print(f"\nUsing test grid: {n_k_points_test}x{n_k_points_test} = {n_k_points_test**2} points")
     
     # Create momentum grid
-    kx_list = np.linspace(-np.pi, np.pi, n_k_points_test)
-    ky_list = np.linspace(-np.pi, np.pi, n_k_points_test)
+    kx_list = get_k_grid(n_k_points_test)
+    ky_list = get_k_grid(n_k_points_test)
     
     print(f"kx range: [{kx_list[0]:.4f}, {kx_list[-1]:.4f}]")
     print(f"ky range: [{ky_list[0]:.4f}, {ky_list[-1]:.4f}]")

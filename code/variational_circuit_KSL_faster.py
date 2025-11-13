@@ -14,6 +14,10 @@ if project_root not in sys.path:
 from time_dependence_functions import get_g, get_B
 from translational_invariant_KSL import get_KSL_model, get_Delta, get_f
 
+# Import get_k_grid from variational_circuit_KSL_numba
+sys.path.insert(0, os.path.dirname(__file__))
+from variational_circuit_KSL_numba import get_k_grid
+
 # Data directory path (relative to this file)
 DATA_DIR = os.path.join(os.path.dirname(__file__), '../data')
 
@@ -580,8 +584,8 @@ def train_variational_circuit():
     print("="*60)
     
     # Create training momentum space grid
-    kx_list_train = np.linspace(-np.pi, np.pi, n_k_points_train)
-    ky_list_train = np.linspace(-np.pi, np.pi, n_k_points_train)
+    kx_list_train = get_k_grid(n_k_points_train)
+    ky_list_train = get_k_grid(n_k_points_train)
     
     print(f"Training grid: {len(kx_list_train)}x{len(ky_list_train)} = {len(kx_list_train)*len(ky_list_train)} points")
     
@@ -614,8 +618,8 @@ def test_variational_circuit(optimized_strength_durations):
     print("="*60)
     
     # Create testing momentum space grid
-    kx_list_test = np.linspace(-np.pi, np.pi, n_k_points_test)
-    ky_list_test = np.linspace(-np.pi, np.pi, n_k_points_test)
+    kx_list_test = get_k_grid(n_k_points_test)
+    ky_list_test = get_k_grid(n_k_points_test)
     
     # Run simulation using helper function
     return run_simulation_on_grid(kx_list_test, ky_list_test, optimized_strength_durations, n_cycles_test, "Testing", plot=False)
@@ -693,8 +697,8 @@ def main():
     print("="*60)
     
     # Create testing momentum space grid for the analysis
-    kx_list_test = np.linspace(-np.pi, np.pi, n_k_points_test)
-    ky_list_test = np.linspace(-np.pi, np.pi, n_k_points_test)
+    kx_list_test = get_k_grid(n_k_points_test)
+    ky_list_test = get_k_grid(n_k_points_test)
     
     # Plot energy density vs cycles
     cycle_counts, energy_densities = plot_energy_density_vs_cycles(

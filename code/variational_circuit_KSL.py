@@ -15,6 +15,10 @@ if project_root not in sys.path:
 from time_dependence_functions import get_g, get_B
 from translational_invariant_KSL import get_KSL_model, get_Delta, get_f
 
+# Import get_k_grid from variational_circuit_KSL_numba
+sys.path.insert(0, os.path.dirname(__file__))
+from variational_circuit_KSL_numba import get_k_grid
+
 # Data directory path (relative to this file)
 DATA_DIR = os.path.join(os.path.dirname(__file__), '../data')
 
@@ -320,8 +324,8 @@ def main():
     print("Starting variational circuit simulation with optimization...")
     
     # Create momentum space grid - start with a small grid for testing
-    kx_list = np.linspace(-np.pi, np.pi, n_k_points)
-    ky_list = np.linspace(-np.pi, np.pi, n_k_points)
+    kx_list = get_k_grid(n_k_points)
+    ky_list = get_k_grid(n_k_points)
     
     print(f"Using {p} layers for variational circuit")
     print(f"Momentum grid: {len(kx_list)}x{len(ky_list)} = {len(kx_list)*len(ky_list)} points")
