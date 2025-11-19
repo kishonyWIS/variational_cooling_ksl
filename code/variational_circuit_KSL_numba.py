@@ -8,7 +8,7 @@ import time
 import csv
 import sys
 import os
-from interger_chern_number import chern_from_mixed_spdm
+from interger_chern_number import chern_from_mixed_spdm, get_chern_number_from_single_particle_dm
 
 # Add project root to path to access root-level dependencies
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -222,7 +222,7 @@ def create_variational_circuit(strength_durations, kx, ky):
         Ud: 6x6 unitary matrix representing the variational circuit
     """
     # Convert dictionary to array format (all 6 parameters are trainable)
-    strength_durations_array = np.zeros((6, p), dtype=np.float64)
+    strength_durations_array = np.zeros((6, len(strength_durations['Jx'])), dtype=np.float64)
     strength_durations_array[0, :] = strength_durations['Jx']  # Jx values
     strength_durations_array[1, :] = strength_durations['Jy']  # Jy values
     strength_durations_array[2, :] = strength_durations['Jz']  # Jz values
@@ -231,34 +231,12 @@ def create_variational_circuit(strength_durations, kx, ky):
     strength_durations_array[5, :] = strength_durations['B']  # B values
     
     # Call Numba-optimized function
-    return create_variational_circuit_numba(strength_durations_array, kx, ky, p)
+    return create_variational_circuit_numba(strength_durations_array, kx, ky, len(strength_durations['Jx']))
 
 
 def get_k_grid(n_k_points):
     """Create k-grid from -pi to pi (excluding endpoint) for periodic boundary conditions"""
     return np.linspace(-np.pi, np.pi, n_k_points, endpoint=False)
-
-
-def get_chern_number_from_single_particle_dm(single_particle_dm):
-    """Calculate Chern number from single-particle density matrix with periodic boundary conditions"""
-    n_kx, n_ky = single_particle_dm.shape[0], single_particle_dm.shape[1]
-    
-    # Compute derivatives with wrapping for periodic boundary conditions
-    # dP_dkx: difference along kx axis, wrapping from last to first
-    dP_dkx = np.roll(single_particle_dm, -1, axis=0) - single_particle_dm
-    
-    # dP_dky: difference along ky axis, wrapping from last to first
-    dP_dky = np.roll(single_particle_dm, -1, axis=1) - single_particle_dm
-    
-    # Compute integrand for all k-points
-    integrand = np.zeros((n_kx, n_ky), dtype=complex)
-    for i_kx, i_ky in product(range(n_kx), range(n_ky)):
-        P = single_particle_dm[i_kx, i_ky, :, :]
-        dP_dkx_ij = dP_dkx[i_kx, i_ky, :, :]
-        dP_dky_ij = dP_dky[i_kx, i_ky, :, :]
-        integrand[i_kx, i_ky] = np.trace(P @ (dP_dkx_ij @ dP_dky_ij - dP_dky_ij @ dP_dkx_ij))
-    
-    return (np.sum(integrand)/(2*np.pi)).imag
 
 
 def trotterized_evolution_parameters(num_steps=p):

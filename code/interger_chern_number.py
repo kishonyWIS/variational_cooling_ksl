@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import product
 
 def chern_from_mixed_spdm(R):
     """
@@ -43,6 +44,43 @@ def chern_from_mixed_spdm(R):
 
     Chern_cont = total_phase / (2*np.pi)
     return Chern_cont
+
+
+def get_chern_number_from_single_particle_dm(single_particle_dm):
+    """
+    Calculate Chern number from single-particle density matrix with periodic boundary conditions.
+    
+    This is an alternative method to chern_from_mixed_spdm that uses derivatives.
+    Uses the formula: C = (1/(2π)) * Im[Σ Tr(P @ (dP_dkx @ dP_dky - dP_dky @ dP_dkx))]
+    
+    Parameters
+    ----------
+    single_particle_dm : ndarray, shape (Nx, Ny, M, M)
+        Single-particle density matrix on a momentum space grid
+        
+    Returns
+    -------
+    float
+        Chern number
+    """
+    n_kx, n_ky = single_particle_dm.shape[0], single_particle_dm.shape[1]
+    
+    # Compute derivatives with wrapping for periodic boundary conditions
+    # dP_dkx: difference along kx axis, wrapping from last to first
+    dP_dkx = np.roll(single_particle_dm, -1, axis=0) - single_particle_dm
+    
+    # dP_dky: difference along ky axis, wrapping from last to first
+    dP_dky = np.roll(single_particle_dm, -1, axis=1) - single_particle_dm
+    
+    # Compute integrand for all k-points
+    integrand = np.zeros((n_kx, n_ky), dtype=complex)
+    for i_kx, i_ky in product(range(n_kx), range(n_ky)):
+        P = single_particle_dm[i_kx, i_ky, :, :]
+        dP_dkx_ij = dP_dkx[i_kx, i_ky, :, :]
+        dP_dky_ij = dP_dky[i_kx, i_ky, :, :]
+        integrand[i_kx, i_ky] = np.trace(P @ (dP_dkx_ij @ dP_dky_ij - dP_dky_ij @ dP_dkx_ij))
+    
+    return (np.sum(integrand)/(2*np.pi)).imag
 
 
 def qwx_projector_grid(Nx=31, Ny=31, m=-1.0):
