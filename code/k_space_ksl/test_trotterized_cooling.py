@@ -73,6 +73,11 @@ def create_trotterized_circuit(kx: float, ky: float, num_steps: int = 100,
         parameters['B_A'][step] = B_t * dt
         parameters['B_B'][step] = B_t * dt
     
+    # take absolute value of parameters - for the trotterized circuit we want to use the phases of the parameters are they are in the Hamiltonian
+    # this is ensured by the unitary exponentiation function. giving the parameters a phase would modify this.
+    for key in parameters:
+        parameters[key] = np.abs(parameters[key])
+
     # Create circuit
     circuit = VariationalCircuit(hamiltonian, parameters)
     
@@ -172,6 +177,6 @@ def test_trotterized_cooling(kx: float = 0.5, ky: float = 0.7, num_steps: int = 
 
 
 if __name__ == "__main__":
-    kx = 0.6
-    ky = 1.5
-    test_trotterized_cooling(kx=kx, ky=ky, num_steps=10000, num_cycles=5, Jx=1.00, Jy=1.00, Jz=1.00, kappa=1.00)
+    kx = -0.6
+    ky = 0.9
+    test_trotterized_cooling(kx=kx, ky=ky, num_steps=4000, num_cycles=5, Jx=1.00, Jy=1.00, Jz=1.00, kappa=1.00)

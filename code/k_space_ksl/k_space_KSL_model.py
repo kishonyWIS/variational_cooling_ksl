@@ -88,9 +88,13 @@ class HamiltonianTerm:
         Returns:
             system_size x system_size sparse CSR unitary matrix
         """
-        # Handle zero strength case
+        # Handle zero strength case: return identity
         if np.abs(self.strength) < 1e-10:
-            raise ValueError(f"Strength of term at {self.i}, {self.j} is zero")
+            return sparse.eye(self.system_size, format='csr', dtype=complex)
+        
+        # Handle zero theta case: return identity
+        if np.abs(theta) < 1e-10:
+            return sparse.eye(self.system_size, format='csr', dtype=complex)
         
         # Normalize strength
         strength_normalized = self.strength / np.abs(self.strength)
@@ -388,8 +392,6 @@ def get_Delta_without_kappa(kx, ky):
     To get the full Delta with kappa: kappa * get_Delta_without_kappa(kx, ky)
     """
     return 2.0 * (np.sin(kx) - np.sin(ky) + np.sin(ky - kx))
-
-
 
 
 def create_KSL_hamiltonian(kx, ky, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0, g=0.0, B=0.0):
