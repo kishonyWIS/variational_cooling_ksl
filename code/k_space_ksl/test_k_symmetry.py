@@ -14,8 +14,7 @@ if project_root not in sys.path:
 
 # Import from the same directory
 from progressive_circuit_expansion_training import (
-    simulate_single_kpoint, 
-    convert_parameters_to_new_structure
+    simulate_single_kpoint
 )
 from k_space_KSL_model import create_KSL_hamiltonian, VariationalCircuit, KSLSingleParticleDensityMatrix
 

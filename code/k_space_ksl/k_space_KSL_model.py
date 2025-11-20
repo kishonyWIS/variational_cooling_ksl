@@ -80,10 +80,10 @@ class HamiltonianTerm:
     
     def exp_unitary(self, theta: float) -> sparse.csr_matrix:
         """
-        Compute exp(-i*theta*strength/abs(strength)*H_term).
+        Compute exp(-i*theta*H_term) where H_term uses full self.strength.
         
         Args:
-            theta: Rotation angle
+            theta: Real prefactor (rotation angle/time step)
             
         Returns:
             system_size x system_size sparse CSR unitary matrix
@@ -96,20 +96,17 @@ class HamiltonianTerm:
         if np.abs(theta) < 1e-10:
             return sparse.eye(self.system_size, format='csr', dtype=complex)
         
-        # Normalize strength
-        strength_normalized = self.strength / np.abs(self.strength)
-        
         # Create sparse identity matrix
         U = sparse.eye(self.system_size, format='lil', dtype=complex)
         
         if self.i == self.j:
-            # Diagonal case: exp(-i*theta*strength_normalized) on diagonal
-            U[self.i, self.i] = np.exp(-1j * theta * strength_normalized)
+            # Diagonal case: exp(-i*theta*strength) on diagonal
+            U[self.i, self.i] = np.exp(-1j * theta * self.strength)
         else:
             # Off-diagonal case: 2x2 block
             H_2x2 = np.array([
-                [0, strength_normalized],
-                [np.conj(strength_normalized), 0]
+                [0, self.strength],
+                [np.conj(self.strength), 0]
             ], dtype=complex)
             
             # Compute exp(-i*theta*H_2x2)

@@ -14,9 +14,8 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from k_space_KSL_model import create_KSL_hamiltonian, VariationalCircuit, Hamiltonian, KSLSingleParticleDensityMatrix
-from time_dependence_functions import get_g, get_B
-from k_space_KSL_model import get_Delta_without_kappa
+from k_space_KSL_model import create_KSL_hamiltonian, VariationalCircuit, KSLSingleParticleDensityMatrix
+from progressive_circuit_expansion_training import create_trotterized_parameters_9param
 
 
 def create_trotterized_circuit(kx: float, ky: float, num_steps: int = 100, 
@@ -26,6 +25,8 @@ def create_trotterized_circuit(kx: float, ky: float, num_steps: int = 100,
     """
     Create a trotterized circuit with time-dependent g(t) and B(t).
     
+    Uses the shared create_trotterized_parameters_9param function to avoid code duplication.
+    
     Args:
         kx, ky: Momentum values
         num_steps: Number of Trotter steps
@@ -33,50 +34,17 @@ def create_trotterized_circuit(kx: float, ky: float, num_steps: int = 100,
         g0: Maximum g value
         B0: Initial B value
         B1: Final B value
-        t1: Time parameter for g(t) bump
-        Jx, Jy, Jz, kappa: Kitaev parameters
+        Jx, Jy, Jz, kappa: Kitaev parameters (used in Hamiltonian, not in parameters)
     
     Returns:
         VariationalCircuit instance
     """
     # Create Hamiltonian (g and B will be time-dependent in the circuit)
-    hamiltonian = create_KSL_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=1., B=1.) # g and B are constants for now to ensure the terms are added to the Hamiltonian
+    # g and B are constants for now to ensure the terms are added to the Hamiltonian
+    hamiltonian = create_KSL_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=1., B=1.)
     
-    # Time step for trotterization
-    dt = T / num_steps
-
-    Delta = kappa * get_Delta_without_kappa(kx, ky)
-    
-    # Initialize parameters - all terms get dt per step
-    # For g and B, we'll multiply by the time-dependent values
-    parameters = {
-        'Jx': np.ones(num_steps) * Jx*dt,
-        'Jy': np.ones(num_steps) * Jy*dt,
-        'Jz': np.ones(num_steps) * Jz*dt,
-        'Delta_A': np.ones(num_steps) * Delta*dt,
-        'Delta_B': np.ones(num_steps) * Delta*dt,
-        'g_A': np.ones(num_steps),
-        'g_B': np.ones(num_steps),
-        'B_A': np.ones(num_steps),
-        'B_B': np.ones(num_steps),
-    }
-    
-    # Apply time-dependent scaling for g and B terms
-    for step in range(num_steps):
-        t = step * dt
-        g_t = get_g(t, g0, T, T/4)
-        B_t = get_B(t, B0, B1, T)
-        
-        # g and B parameters are the time-dependent values times dt
-        parameters['g_A'][step] = g_t * dt
-        parameters['g_B'][step] = g_t * dt
-        parameters['B_A'][step] = B_t * dt
-        parameters['B_B'][step] = B_t * dt
-    
-    # take absolute value of parameters - for the trotterized circuit we want to use the phases of the parameters are they are in the Hamiltonian
-    # this is ensured by the unitary exponentiation function. giving the parameters a phase would modify this.
-    for key in parameters:
-        parameters[key] = np.abs(parameters[key])
+    # Get parameters from shared function
+    parameters = create_trotterized_parameters_9param(num_steps, T, g0, B0, B1)
 
     # Create circuit
     circuit = VariationalCircuit(hamiltonian, parameters)
@@ -103,17 +71,7 @@ def test_trotterized_cooling(kx: float = 0.5, ky: float = 0.7, num_steps: int = 
     
     # Create system Hamiltonian for energy computation and ground state
     # (without g and B terms, as energy is measured with respect to system only)
-    system_hamiltonian_with_B = create_KSL_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=1.0)
     system_hamiltonian = create_KSL_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=0.0)
-    ground_state_matrix_with_B = system_hamiltonian_with_B.get_ground_state()
-    ground_state_with_B = KSLSingleParticleDensityMatrix(matrix=ground_state_matrix_with_B)
-    print('ground state matrix with B')
-    print(ground_state_matrix_with_B)
-    #reset all tau
-    ground_state_with_B.reset_all_tau()
-    print('ground state matrix with B after reset')
-    print(ground_state_with_B.matrix)
-
 
     # Get ground state
     ground_state_matrix = system_hamiltonian.get_ground_state()
@@ -177,6 +135,6 @@ def test_trotterized_cooling(kx: float = 0.5, ky: float = 0.7, num_steps: int = 
 
 
 if __name__ == "__main__":
-    kx = -0.6
+    kx = 0.6
     ky = 0.9
     test_trotterized_cooling(kx=kx, ky=ky, num_steps=4000, num_cycles=5, Jx=1.00, Jy=1.00, Jz=1.00, kappa=1.00)

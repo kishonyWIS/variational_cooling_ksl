@@ -32,7 +32,7 @@ if code_dir not in sys.path:
 
 from k_space_KSL_model import (
     create_KSL_hamiltonian, VariationalCircuit, 
-    KSLSingleParticleDensityMatrix, get_Delta_without_kappa
+    KSLSingleParticleDensityMatrix
 )
 from time_dependence_functions import get_g, get_B
 from interger_chern_number import chern_from_mixed_spdm
@@ -51,47 +51,81 @@ def get_k_grid(n_k_points):
     return np.linspace(-np.pi, np.pi, n_k_points, endpoint=False)
 
 
+def create_trotterized_parameters_9param(num_steps, T, g0, B0, B1):
+    """
+    Create trotterized evolution parameters with 9-parameter structure (new structure).
+    
+    This is a shared helper function used by both create_trotterized_circuit and
+    trotterized_evolution_parameters to avoid code duplication.
+    
+    Args:
+        num_steps: Number of Trotter steps
+        T: Total evolution time
+        g0, B0, B1: Time-dependent function parameters
+    
+    Returns:
+        Dictionary with 9-parameter structure: ['Jx', 'Jy', 'Jz', 'Delta_A', 'Delta_B', 
+        'g_A', 'g_B', 'B_A', 'B_B']. All values are arrays of length num_steps.
+        Parameters are time-step multipliers (dt), with g and B being time-dependent.
+    """
+    # Time step for trotterization
+    dt = T / num_steps
+    
+    # Initialize parameters - all terms get dt per step (magnitudes are in Hamiltonian term strengths)
+    # For g and B, we'll multiply by the time-dependent values
+    parameters = {
+        'Jx': np.ones(num_steps) * dt,
+        'Jy': np.ones(num_steps) * dt,
+        'Jz': np.ones(num_steps) * dt,
+        'Delta_A': np.ones(num_steps) * dt,
+        'Delta_B': np.ones(num_steps) * dt,
+        'g_A': np.ones(num_steps),
+        'g_B': np.ones(num_steps),
+        'B_A': np.ones(num_steps),
+        'B_B': np.ones(num_steps),
+    }
+    
+    # Apply time-dependent scaling for g and B terms
+    for step in range(num_steps):
+        t = step * dt
+        g_t = get_g(t, g0, T, T/4)
+        B_t = get_B(t, B0, B1, T)
+        
+        # g and B parameters are the time-dependent values times dt
+        parameters['g_A'][step] = g_t * dt
+        parameters['g_B'][step] = g_t * dt
+        parameters['B_A'][step] = B_t * dt
+        parameters['B_B'][step] = B_t * dt
+    
+    return parameters
+
+
 # ===== Parameter Conversion Functions =====
 
-def convert_parameters_to_new_structure(parameters, kx, ky):
+def convert_parameters_to_new_structure(parameters):
     """
     Convert old 6-parameter structure to new 9-parameter structure.
     
     Args:
         parameters: Dictionary with keys ['Jx', 'Jy', 'Jz', 'kappa', 'g', 'B']
-                   Each value is an array of length p (number of layers)
-        kx, ky: Momentum values (scalars)
+                   Each value is an array of length p (number of layers) containing time-step multipliers (dt)
     
     Returns:
         Dictionary with keys ['Jx', 'Jy', 'Jz', 'Delta_A', 'Delta_B', 'g_A', 'g_B', 'B_A', 'B_B']
         Each value is an array of length p
     
     Note:
-        In the old code, parameters['kappa'] contains parameter values (multipliers like dt) that are 
-        multiplied by Delta_without_kappa.
-        The kappa constant from the Hamiltonian is applied separately when creating the Hamiltonian.
-        To match this, we use get_Delta_without_kappa(kx, ky) which does NOT include kappa.
-        The kappa constant is then applied in create_KSL_hamiltonian by multiplying kappa * get_Delta_without_kappa(kx, ky).
+        Parameters are now just time-step multipliers (dt). The magnitudes (Jx, Jy, Jz, kappa, Delta)
+        are already in the Hamiltonian term strengths. Parameters are passed through directly.
     """
-    p = len(parameters['Jx'])
-    # Compute Delta_without_kappa (kappa-independent part)
-    # The parameter['kappa'] values are multipliers that get multiplied by Delta_without_kappa
-    # The actual kappa constant from the Hamiltonian is applied when creating the Hamiltonian matrix
-    # via create_KSL_hamiltonian(kx, ky, ..., kappa=kappa), which computes Delta = kappa * get_Delta_without_kappa(kx, ky)
-    # So we should NOT include kappa here - it will be included in the Hamiltonian term strength
-    Delta_without_kappa = get_Delta_without_kappa(kx, ky)
-    
-    # Create new parameter structure
-    # Note: We take absolute value of Delta_without_kappa to preserve symmetry k -> -k
-    # The phases come from the Hamiltonian terms themselves, not from the parameters
-    Delta_without_kappa_abs = Delta_without_kappa
-    
+    # Create new parameter structure - parameters are just time-step multipliers
+    # All magnitudes are already in the Hamiltonian term strengths
     new_parameters = {
         'Jx': parameters['Jx'].copy(),
         'Jy': parameters['Jy'].copy(),
         'Jz': parameters['Jz'].copy(),
-        'Delta_A': parameters['kappa'].copy() * Delta_without_kappa_abs,  # parameters['kappa'] contains multipliers (like dt), multiplied by kappa-independent Delta
-        'Delta_B': parameters['kappa'].copy() * Delta_without_kappa_abs,   # Same for both
+        'Delta_A': parameters['kappa'].copy(),  # Just dt, Delta magnitude is in Hamiltonian
+        'Delta_B': parameters['kappa'].copy(),    # Same for both
         'g_A': parameters['g'].copy(),
         'g_B': parameters['g'].copy(),
         'B_A': parameters['B'].copy(),
@@ -128,7 +162,7 @@ def simulate_single_kpoint(kx, ky, parameters, n_cycles, Jx, Jy, Jz, kappa):
     E_gs = system_hamiltonian.compute_energy(ground_state_matrix)
     
     # Convert parameters to new structure
-    new_parameters = convert_parameters_to_new_structure(parameters, kx, ky)
+    new_parameters = convert_parameters_to_new_structure(parameters)
     
     # Create circuit Hamiltonian (g and B set to 1.0 to ensure terms exist)
     circuit_hamiltonian = create_KSL_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=1.0, B=1.0)
@@ -238,60 +272,37 @@ def simulate_grid_with_analysis(kx_list, ky_list, parameters, n_cycles, Jx, Jy, 
 
 # ===== Parameter Management Functions =====
 
-def trotterized_evolution_parameters(num_steps, T, g0, B0, B1, Jx, Jy, Jz):
+def trotterized_evolution_parameters(num_steps, T, g0, B0, B1):
     """
     Create trotterized evolution parameters based on the original adiabatic evolution.
     This provides a starting point for the variational optimization.
     
-    Uses the same logic as create_trotterized_circuit from test_trotterized_cooling.py,
-    but returns the old 6-parameter structure instead of creating a circuit.
+    Uses the shared create_trotterized_parameters_9param function and converts
+    to the old 6-parameter structure.
     
-    Note: kappa is not used here because in the old structure, 'kappa' is just a multiplier (dt).
-    The actual kappa constant is applied later when creating the Hamiltonian.
+    Note: Parameters are now just time-step multipliers (dt). The magnitudes (Jx, Jy, Jz, kappa)
+    are already in the Hamiltonian term strengths.
     
     Args:
         num_steps: Number of Trotter steps (p)
         T: Total evolution time
         g0, B0, B1: Time-dependent function parameters
-        Jx, Jy, Jz: Kitaev parameters
     
     Returns:
-        Dictionary with old 6-parameter structure (all values are non-negative, 
-        matching the trotterized circuit initialization)
+        Dictionary with old 6-parameter structure (all values are real time-step multipliers)
     """
-    # Time step for trotterization
-    dt = T / num_steps
+    # Get 9-parameter structure from shared function
+    params_9 = create_trotterized_parameters_9param(num_steps, T, g0, B0, B1)
     
-    # Initialize parameters - all terms get dt per step
-    # For g and B, we'll multiply by the time-dependent values
-    # Using the same structure as create_trotterized_circuit
+    # Convert to old 6-parameter structure
     parameters = {
-        'Jx': np.ones(num_steps) * Jx*dt,
-        'Jy': np.ones(num_steps) * Jy*dt,
-        'Jz': np.ones(num_steps) * Jz*dt,
-        'kappa': np.ones(num_steps) * dt,  # Will be scaled by Delta per k-point
-        'g': np.ones(num_steps),  # Will be overwritten with g_t * dt
-        'B': np.ones(num_steps)   # Will be overwritten with B_t * dt
+        'Jx': params_9['Jx'].copy(),
+        'Jy': params_9['Jy'].copy(),
+        'Jz': params_9['Jz'].copy(),
+        'kappa': params_9['Delta_A'].copy(),  # Delta_A and Delta_B are the same, use one
+        'g': params_9['g_A'].copy(),  # g_A and g_B are the same, use one
+        'B': params_9['B_A'].copy()   # B_A and B_B are the same, use one
     }
-    
-    # Apply time-dependent scaling for g and B terms
-    for step in range(num_steps):
-        t = step * dt
-        g_t = get_g(t, g0, T, T/4)
-        B_t = get_B(t, B0, B1, T)
-        
-        # g and B parameters are the time-dependent values times dt
-        parameters['g'][step] = g_t * dt
-        parameters['B'][step] = B_t * dt
-    
-    # Take absolute value of parameters - for the trotterized circuit we want to use 
-    # the phases of the parameters as they are in the Hamiltonian.
-    # This is ensured by the unitary exponentiation function. Giving the parameters 
-    # a phase would modify this.
-    # During training, parameters are allowed to become negative (which flips phases),
-    # but for initialization we use absolute values to match the trotterized circuit.
-    for key in parameters:
-        parameters[key] = np.abs(parameters[key])
     
     return parameters
 
@@ -527,7 +538,7 @@ def optimize_strength_durations_global(kx_list, ky_list, n_cycles, p, niter=50,
     print("Starting global optimization...")
     
     # Start from trotterized parameters
-    initial_parameters = trotterized_evolution_parameters(p, T, g0, B0, B1, Jx, Jy, Jz)
+    initial_parameters = trotterized_evolution_parameters(p, T, g0, B0, B1)
     initial_vector = strength_durations_to_vector(initial_parameters, p)
     
     print(f"Optimizing {len(initial_vector)} parameters using basin hopping")
@@ -604,7 +615,7 @@ def run_single_experiment(p_val, kx_list_train, ky_list_train, kx_list_test, ky_
         # Use local optimization
         # Get initialization parameters
         if initial_parameters is None:
-            initial_parameters = trotterized_evolution_parameters(p_val, T, g0, B0, B1, Jx, Jy, Jz)
+            initial_parameters = trotterized_evolution_parameters(p_val, T, g0, B0, B1)
         
         # Optimize the parameters on training data
         optimized_parameters, opt_result = optimize_strength_durations(
