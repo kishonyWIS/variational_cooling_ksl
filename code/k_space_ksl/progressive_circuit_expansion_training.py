@@ -18,7 +18,6 @@ import numpy as np
 from scipy.optimize import minimize, basinhopping
 import time
 import csv
-import matplotlib.pyplot as plt
 
 # Add project root to path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
@@ -579,7 +578,7 @@ def optimize_strength_durations_global(kx_list, ky_list, n_cycles, p, niter=50,
 
 def run_single_experiment(p_val, kx_list_train, ky_list_train, kx_list_test, ky_list_test,
                          initial_parameters=None, use_global=False, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0,
-                         n_cycles_train=5, n_cycles_test=10, T=50.0, g0=0.5, B0=7.0, B1=0.0, epochs=1000,
+                         n_cycles_train=5, n_cycles_test=40, T=50.0, g0=0.5, B0=7.0, B1=0.0, epochs=1000,
                          global_niter=10):
     """
     Run a single experiment with given parameters.
@@ -628,58 +627,21 @@ def run_single_experiment(p_val, kx_list_train, ky_list_train, kx_list_test, ky_
             epochs=epochs
         )
     
-    # Evaluate on training grid (using n_cycles_train to match training)
-    # Use the same filtered ky_list as used during optimization (ky >= 0)
-    # Use RMS to match the objective function metric
-    ky_list_train_filtered = ky_list_train[ky_list_train >= 0]
-    E_diff_train, _ = simulate_grid(kx_list_train, ky_list_train_filtered, optimized_parameters, 
-                                     n_cycles=n_cycles_train, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, verbose=False)
-    if n_cycles_train == 1:
-        energy_density_train = np.sqrt(np.nanmean(E_diff_train**2)) / 2
+    # Evaluate on training grid (using full grid and n_cycles_test)
+    E_diff_train, _ = simulate_grid(kx_list_train, ky_list_train, optimized_parameters, 
+                                     n_cycles=n_cycles_test, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, verbose=False)
+    if n_cycles_test == 1:
+        energy_density_train = np.nanmean(E_diff_train) / 2
     else:
-        energy_density_train = np.sqrt(np.nanmean(E_diff_train[-1, :, :]**2)) / 2
-
-    print(E_diff_train.shape)
-    print(ky_list_train_filtered)
-    plt.imshow(E_diff_train[-1, :, :], extent=[-np.pi, np.pi, -np.pi, np.pi], origin='lower')
-    plt.colorbar(label='Energy difference')
-    plt.xlabel('kx')
-    plt.ylabel('ky')
-    plt.title(f'Energy difference after optimization for ky >= 0, energy density: {energy_density_train:.6f}')
-    plt.show()
-
-    ky_list_train_filtered = ky_list_train
-    E_diff_train, _ = simulate_grid(kx_list_train, ky_list_train_filtered, optimized_parameters, 
-                                     n_cycles=n_cycles_train, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, verbose=False)
-    if n_cycles_train == 1:
-        energy_density_train = np.sqrt(np.nanmean(E_diff_train**2)) / 2
-    else:
-        energy_density_train = np.sqrt(np.nanmean(E_diff_train[-1, :, :]**2)) / 2
-
-    print(E_diff_train.shape)
-    print(ky_list_train_filtered)
-    plt.imshow(E_diff_train[-1, :, :], extent=[-np.pi, np.pi, -np.pi, np.pi], origin='lower')
-    plt.colorbar(label='Energy difference')
-    plt.xlabel('kx')
-    plt.ylabel('ky')
-    plt.title(f'Energy difference after optimization for all ky, energy density: {energy_density_train:.6f}')
-    plt.show()
+        energy_density_train = np.nanmean(E_diff_train[-1, :, :]) / 2
     
-    # Evaluate on test grid (using n_cycles_test for generalization)
-    # Use RMS to match the objective function metric
+    # Evaluate on test grid (using n_cycles_test)
     E_diff_test, _ = simulate_grid(kx_list_test, ky_list_test, optimized_parameters, 
                                     n_cycles=n_cycles_test, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, verbose=False)
     if n_cycles_test == 1:
-        energy_density_test = np.sqrt(np.nanmean(E_diff_test**2)) / 2
+        energy_density_test = np.nanmean(E_diff_test) / 2
     else:
-        energy_density_test = np.sqrt(np.nanmean(E_diff_test[-1, :, :]**2)) / 2
-    
-    plt.imshow(E_diff_test[-1, :, :], extent=[-np.pi, np.pi, -np.pi, np.pi], origin='lower')
-    plt.colorbar(label='Energy difference')
-    plt.xlabel('kx')
-    plt.ylabel('ky')
-    plt.title('Energy difference after optimization')
-    plt.show()
+        energy_density_test = np.nanmean(E_diff_test[-1, :, :]) / 2
     
     return energy_density_train, energy_density_test, optimized_parameters
 
@@ -768,7 +730,7 @@ def save_results_to_csv(results, filename):
 
 def run_progressive_circuit_expansion(output_csv=None, params_output_dir=None,
                                      Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0,
-                                     n_cycles_train=5, n_cycles_test=10, T=50.0, g0=0.5, B0=7.0, B1=0.0, epochs=1000,
+                                     n_cycles_train=5, n_cycles_test=40, T=50.0, g0=0.5, B0=7.0, B1=0.0, epochs=1000,
                                      global_niter=10):
     """
     Run progressive circuit expansion over res and p values.
