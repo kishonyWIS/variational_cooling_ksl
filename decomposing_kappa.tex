@@ -1,0 +1,130 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{hyperref}
+
+\title{Enlarged unit cell, decomposition of $\kappa$, and Bloch Hamiltonian}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Enlarged unit cell, decomposition of \texorpdfstring{$\kappa$}{kappa}, and Bloch Hamiltonian}
+
+\subsection{Lattice and supercell}
+We work on the honeycomb in brick-wall coordinates with original integer coordinates $(i,j)\in\mathbb Z^2$.
+We enlarge to a $2\times2$ supercell with
+\[
+\mathbf a = 2\hat i,\qquad \mathbf b = 2\hat j,
+\]
+and four internal offsets
+\[
+r_0=(0,0),\qquad r_1=(1,0),\qquad r_2=(0,1),\qquad r_3=(1,1).
+\]
+A supercell position is $\mathbf R = m\,\mathbf a + n\,\mathbf b$. Sites are labeled $(\mathbf R,r,s)$ with $r\in\{0,1,2,3\}$ and sublattice $s\in\{A,B\}$.
+We use the Bloch basis
+\[
+\Psi_{\mathbf K} = (A_0,A_1,A_2,A_3;\; B_0,B_1,B_2,B_3)^{\mathsf T},
+\]
+and define
+\[
+\mathbf K\!\cdot\!\mathbf a = 2K_i,\qquad
+\mathbf K\!\cdot\!\mathbf b = 2K_j,\qquad
+\mathbf K\!\cdot(\mathbf a-\mathbf b)= 2(K_i-K_j).
+\]
+
+\subsection{Nearest-neighbor (Kitaev) map in real space}
+Using the convention
+\[
+J_x:\ B_{i,j}\to A_{i,j},\quad
+J_y:\ B_{i,j}\to A_{i+1,j},\quad
+J_z:\ B_{i,j}\to A_{i,j+1},
+\]
+the Majorana hopping Hamiltonian (itinerant $c^z\equiv c$; flux-free gauge) is
+\[
+H_J
+= i\sum_{\mathbf R}\Big[
+J_x\!\!\sum_{r=0}^3 c_{B,\mathbf R,r}c_{A,\mathbf R,r}
++J_y\big(c_{B,\mathbf R,r_0}c_{A,\mathbf R,r_1}+c_{B,\mathbf R,r_2}c_{A,\mathbf R,r_3}
++c_{B,\mathbf R,r_1}c_{A,\mathbf R+\mathbf a,r_0}+c_{B,\mathbf R,r_3}c_{A,\mathbf R+\mathbf a,r_2}\big)
+\]
+\[
+\hspace{8.7em}
++J_z\big(c_{B,\mathbf R,r_0}c_{A,\mathbf R,r_2}+c_{B,\mathbf R,r_1}c_{A,\mathbf R,r_3}
++c_{B,\mathbf R,r_2}c_{A,\mathbf R+\mathbf b,r_0}+c_{B,\mathbf R,r_3}c_{A,\mathbf R+\mathbf b,r_1}\big)
+\Big].
+\]
+
+\subsection{Twelve vertex-disjoint \texorpdfstring{$\kappa$}{kappa} subsets in real space}
+We decompose the chiral term into $12$ commuting blocks indexed by sublattice class $S\in\{A,B\}$ (A--A or B--B), next-nearest-neighbor direction $d\in\{+i,\,-j,\,j-i\}$, and parity $p\in\{\mathrm{even},\mathrm{odd}\}$. Each block is a \emph{matching} (no shared sites), so $\exp(-i\theta H^{S,d,p}_\kappa)$ is exact per block. 
+With a fixed orientation $J\!\to\!K=J+d$, the A--A blocks carry signs $(+,-,+)$ for $d=(+i,-j,j{-}i)$, while B--B blocks carry the opposite $(-,+,-)$.
+
+For the $2\times2$ supercell:
+\begin{align*}
+H_{\kappa}^{A,+i,\mathrm{even}} &= i\sum_{\mathbf R}\kappa_{A,+i,\mathrm{e}}\big(c_{A,\mathbf R,r_0}c_{A,\mathbf R,r_1}+c_{A,\mathbf R,r_2}c_{A,\mathbf R,r_3}\big),\\
+H_{\kappa}^{A,+i,\mathrm{odd}}  &= -i\sum_{\mathbf R}\kappa_{A,+i,\mathrm{o}}\big(c_{A,\mathbf R,r_0}c_{A,\mathbf R-\mathbf a,r_1}+c_{A,\mathbf R,r_2}c_{A,\mathbf R-\mathbf a,r_3}\big),\\[2pt]
+H_{\kappa}^{A,-j,\mathrm{even}} &= -i\sum_{\mathbf R}\kappa_{A,-j,\mathrm{e}}\big(c_{A,\mathbf R,r_0}c_{A,\mathbf R,r_2}+c_{A,\mathbf R,r_1}c_{A,\mathbf R,r_3}\big),\\
+H_{\kappa}^{A,-j,\mathrm{odd}}  &= +i\sum_{\mathbf R}\kappa_{A,-j,\mathrm{o}}\big(c_{A,\mathbf R,r_0}c_{A,\mathbf R-\mathbf b,r_2}+c_{A,\mathbf R,r_1}c_{A,\mathbf R-\mathbf b,r_3}\big),\\[2pt]
+H_{\kappa}^{A,j-i,\mathrm{even}} &= i\sum_{\mathbf R}\kappa_{A,j-i,\mathrm{e}}\big(c_{A,\mathbf R,r_1}c_{A,\mathbf R,r_2}+c_{A,\mathbf R,r_3}c_{A,\mathbf R+\mathbf b,r_0}\big),\\
+H_{\kappa}^{A,j-i,\mathrm{odd}}  &= -i\sum_{\mathbf R}\kappa_{A,j-i,\mathrm{o}}\big(c_{A,\mathbf R,r_1}c_{A,\mathbf R+\mathbf a-\mathbf b,r_2}+c_{A,\mathbf R,r_3}c_{A,\mathbf R+\mathbf a,r_0}\big),
+\end{align*}
+and analogously for B--B with the opposite signs:
+\begin{align*}
+H_{\kappa}^{B,+i,\mathrm{even}} &= -i\sum_{\mathbf R}\kappa_{B,+i,\mathrm{e}}\big(c_{B,\mathbf R,r_0}c_{B,\mathbf R,r_1}+c_{B,\mathbf R,r_2}c_{B,\mathbf R,r_3}\big),\\
+H_{\kappa}^{B,+i,\mathrm{odd}}  &= +i\sum_{\mathbf R}\kappa_{B,+i,\mathrm{o}}\big(c_{B,\mathbf R,r_0}c_{B,\mathbf R-\mathbf a,r_1}+c_{B,\mathbf R,r_2}c_{B,\mathbf R-\mathbf a,r_3}\big),\\[2pt]
+H_{\kappa}^{B,-j,\mathrm{even}} &= +i\sum_{\mathbf R}\kappa_{B,-j,\mathrm{e}}\big(c_{B,\mathbf R,r_0}c_{B,\mathbf R,r_2}+c_{B,\mathbf R,r_1}c_{B,\mathbf R,r_3}\big),\\
+H_{\kappa}^{B,-j,\mathrm{odd}}  &= -i\sum_{\mathbf R}\kappa_{B,-j,\mathrm{o}}\big(c_{B,\mathbf R,r_0}c_{B,\mathbf R-\mathbf b,r_2}+c_{B,\mathbf R,r_1}c_{B,\mathbf R-\mathbf b,r_3}\big),\\[2pt]
+H_{\kappa}^{B,j-i,\mathrm{even}} &= -i\sum_{\mathbf R}\kappa_{B,j-i,\mathrm{e}}\big(c_{B,\mathbf R,r_1}c_{B,\mathbf R,r_2}+c_{B,\mathbf R,r_3}c_{B,\mathbf R+\mathbf b,r_0}\big),\\
+H_{\kappa}^{B,j-i,\mathrm{odd}}  &= +i\sum_{\mathbf R}\kappa_{B,j-i,\mathrm{o}}\big(c_{B,\mathbf R,r_1}c_{B,\mathbf R+\mathbf a-\mathbf b,r_2}+c_{B,\mathbf R,r_3}c_{B,\mathbf R+\mathbf a,r_0}\big).
+\end{align*}
+Summing all $12$ blocks yields $H_\kappa=\sum_{S,d,p}H_\kappa^{S,d,p}$.
+
+\subsection{Bloch Hamiltonian \texorpdfstring{$H(\mathbf K)$}{H(K)} as an explicit \texorpdfstring{$8\times8$}{8x8} matrix}
+In the Bloch basis, the total Hamiltonian is
+\[
+H(\mathbf K)=
+\begin{pmatrix}
+H_{AA} & H_{AB}\\
+H_{AB}^\dagger & H_{BB}
+\end{pmatrix},\qquad
+H_{ij}(\mathbf K)=H_{ji}(\mathbf K)^{*}.
+\]
+\paragraph{A--A block (kappa, ABA).} Nonzero entries:
+\begin{align*}
+H_{AA}[0,1] &= i\!\left(\kappa_{A,+i,\mathrm{e}}-\kappa_{A,+i,\mathrm{o}}\,e^{-2iK_i}\right),\quad
+H_{AA}[2,3] = i\!\left(\kappa_{A,+i,\mathrm{e}}-\kappa_{A,+i,\mathrm{o}}\,e^{-2iK_i}\right),\\
+H_{AA}[0,2] &= i\!\left(-\kappa_{A,-j,\mathrm{e}}+\kappa_{A,-j,\mathrm{o}}\,e^{-2iK_j}\right),\quad
+H_{AA}[1,3] = i\!\left(-\kappa_{A,-j,\mathrm{e}}+\kappa_{A,-j,\mathrm{o}}\,e^{-2iK_j}\right),\\
+H_{AA}[1,2] &= i\!\left(\kappa_{A,j-i,\mathrm{e}}-\kappa_{A,j-i,\mathrm{o}}\,e^{+2i(K_i-K_j)}\right),\\
+H_{AA}[3,0] &= i\!\left(\kappa_{A,j-i,\mathrm{e}}\,e^{+2iK_j}-\kappa_{A,j-i,\mathrm{o}}\,e^{+2iK_i}\right),
+\end{align*}
+with $H_{AA}[j,i]=H_{AA}[i,j]^*$ and all diagonal elements zero.
+
+\paragraph{B--B block (kappa, BAB).} Nonzero entries:
+\begin{align*}
+H_{BB}[0,1] &= i\!\left(-\kappa_{B,+i,\mathrm{e}}+\kappa_{B,+i,\mathrm{o}}\,e^{-2iK_i}\right),\quad
+H_{BB}[2,3] = i\!\left(-\kappa_{B,+i,\mathrm{e}}+\kappa_{B,+i,\mathrm{o}}\,e^{-2iK_i}\right),\\
+H_{BB}[0,2] &= i\!\left(\kappa_{B,-j,\mathrm{e}}-\kappa_{B,-j,\mathrm{o}}\,e^{-2iK_j}\right),\quad
+H_{BB}[1,3] = i\!\left(\kappa_{B,-j,\mathrm{e}}-\kappa_{B,-j,\mathrm{o}}\,e^{-2iK_j}\right),\\
+H_{BB}[1,2] &= i\!\left(-\kappa_{B,j-i,\mathrm{e}}+\kappa_{B,j-i,\mathrm{o}}\,e^{+2i(K_i-K_j)}\right),\\
+H_{BB}[3,0] &= i\!\left(-\kappa_{B,j-i,\mathrm{e}}\,e^{+2iK_j}+\kappa_{B,j-i,\mathrm{o}}\,e^{+2iK_i}\right),
+\end{align*}
+with $H_{BB}[j,i]=H_{BB}[i,j]^*$ and zero diagonals.
+
+\paragraph{A--B block (nearest-neighbor $J$).} Nonzero entries $H_{AB}[\text{A},\text{B}]$:
+\begin{align*}
+&J_x: && H_{AB}[0,0]=iJ_x,\;\; H_{AB}[1,1]=iJ_x,\;\; H_{AB}[2,2]=iJ_x,\;\; H_{AB}[3,3]=iJ_x,\\
+&J_y: && H_{AB}[1,0]=iJ_y,\;\; H_{AB}[0,1]=iJ_y\,e^{+2iK_i},\;\; H_{AB}[3,2]=iJ_y,\;\; H_{AB}[2,3]=iJ_y\,e^{+2iK_i},\\
+&J_z: && H_{AB}[2,0]=iJ_z,\;\; H_{AB}[0,2]=iJ_z\,e^{+2iK_j},\;\; H_{AB}[3,1]=iJ_z,\;\; H_{AB}[1,3]=iJ_z\,e^{+2iK_j}.
+\end{align*}
+The lower-left block is $H_{BA}=H_{AB}^\dagger$.
+
+\subsection{Remarks}
+\begin{itemize}
+\item Each of the $12$ $\kappa$-blocks is a vertex-disjoint matching $\Rightarrow$ exact exponentiation per subset (no intra-block Trotter error).
+\item Summing $\mathrm{even}+\mathrm{odd}$ for fixed $(S,d)$ produces the expected sine structure factor along $d$; summing the three directions reproduces the usual real $\Delta(\mathbf k)$ sitting with opposite signs on the A/B diagonals.
+\item Hermiticity is enforced everywhere by $H_{ij}(\mathbf K)=H_{ji}(\mathbf K)^{*}$.
+\end{itemize}
+
+\end{document}

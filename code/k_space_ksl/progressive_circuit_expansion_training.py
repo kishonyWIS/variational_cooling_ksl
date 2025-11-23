@@ -18,6 +18,7 @@ import numpy as np
 from scipy.optimize import minimize, basinhopping
 import time
 import csv
+from functools import lru_cache
 
 # Add project root to path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
@@ -136,6 +137,34 @@ def convert_parameters_to_new_structure(parameters):
 
 # ===== Simulation Functions =====
 
+@lru_cache(maxsize=None)
+def _get_cached_hamiltonian_data(kx, ky, Jx, Jy, Jz, kappa):
+    """
+    Cached helper function to compute Hamiltonian and ground state data.
+    
+    This function caches expensive computations (Hamiltonian creation and ground state)
+    that don't depend on variational parameters, only on (kx, ky, Jx, Jy, Jz, kappa).
+    
+    Args:
+        kx, ky: Momentum values
+        Jx, Jy, Jz, kappa: Kitaev parameters
+    
+    Returns:
+        tuple: (system_hamiltonian, ground_state_matrix, E_gs, circuit_hamiltonian)
+    """
+    # Create system Hamiltonian (for energy measurement and ground state)
+    system_hamiltonian = create_KSL_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=0.0)
+    
+    # Get ground state
+    ground_state_matrix = system_hamiltonian.get_ground_state()
+    E_gs = system_hamiltonian.compute_energy(ground_state_matrix)
+    
+    # Create circuit Hamiltonian (g and B set to 1.0 to ensure terms exist)
+    circuit_hamiltonian = create_KSL_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=1.0, B=1.0)
+    
+    return system_hamiltonian, ground_state_matrix, E_gs, circuit_hamiltonian
+
+
 def simulate_single_kpoint(kx, ky, parameters, n_cycles, Jx, Jy, Jz, kappa):
     """
     Simulate variational circuit for a single k-point.
@@ -153,18 +182,13 @@ def simulate_single_kpoint(kx, ky, parameters, n_cycles, Jx, Jy, Jz, kappa):
             - E_gs: Ground state energy
             - single_particle_dm: 6x6 density matrix
     """
-    # Create system Hamiltonian (for energy measurement and ground state)
-    system_hamiltonian = create_KSL_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=0.0)
-    
-    # Get ground state
-    ground_state_matrix = system_hamiltonian.get_ground_state()
-    E_gs = system_hamiltonian.compute_energy(ground_state_matrix)
+    # Get cached Hamiltonian and ground state data (independent of parameters)
+    system_hamiltonian, ground_state_matrix, E_gs, circuit_hamiltonian = _get_cached_hamiltonian_data(
+        kx, ky, Jx, Jy, Jz, kappa
+    )
     
     # Convert parameters to new structure
     new_parameters = convert_parameters_to_new_structure(parameters)
-    
-    # Create circuit Hamiltonian (g and B set to 1.0 to ensure terms exist)
-    circuit_hamiltonian = create_KSL_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=1.0, B=1.0)
     
     # Create variational circuit
     circuit = VariationalCircuit(circuit_hamiltonian, new_parameters)
@@ -579,7 +603,7 @@ def optimize_strength_durations_global(kx_list, ky_list, n_cycles, p, niter=50,
 def run_single_experiment(p_val, kx_list_train, ky_list_train, kx_list_test, ky_list_test,
                          initial_parameters=None, use_global=False, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0,
                          n_cycles_train=5, n_cycles_test=40, T=50.0, g0=0.5, B0=7.0, B1=0.0, epochs=1000,
-                         global_niter=10):
+                         global_niter=50):
     """
     Run a single experiment with given parameters.
     
@@ -731,7 +755,7 @@ def save_results_to_csv(results, filename):
 def run_progressive_circuit_expansion(output_csv=None, params_output_dir=None,
                                      Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0,
                                      n_cycles_train=5, n_cycles_test=40, T=50.0, g0=0.5, B0=7.0, B1=0.0, epochs=1000,
-                                     global_niter=10):
+                                     global_niter=50):
     """
     Run progressive circuit expansion over res and p values.
     
@@ -755,7 +779,7 @@ def run_progressive_circuit_expansion(output_csv=None, params_output_dir=None,
     
     # Parameter ranges
     res_values = [1, 2, 3, 4]
-    p_values = [2, 3, 4, 5, 6, 7, 8, 9, 10]
+    p_values = [2, 3, 4, 5, 6, 7]
     
     # Get the smallest p value (will use global optimization for this)
     smallest_p = min(p_values)
