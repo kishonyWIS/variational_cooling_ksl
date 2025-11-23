@@ -9,6 +9,55 @@ import numpy as np
 from scipy.linalg import expm, eigh
 from scipy import sparse
 from typing import Union
+from functools import lru_cache
+
+
+@lru_cache(maxsize=None)
+def _compute_term_unitary(i: int, j: int, phase: complex, system_size: int) -> sparse.csr_matrix:
+    """
+    Compute exp(-i*phase) for a fermion bilinear term.
+    
+    This is a cached function that computes the unitary for a term with given
+    indices and phase. The phase is theta * strength from the original term.
+    
+    For diagonal terms (i == j): computes exp(-i*phase) on the diagonal.
+    For off-diagonal terms (i != j): computes exp(-i*[[0, phase], [conj(phase), 0]]).
+    
+    Args:
+        i: First fermion mode index
+        j: Second fermion mode index  
+        phase: Complex phase = theta * strength
+        system_size: Total number of fermion modes
+    
+    Returns:
+        system_size x system_size sparse CSR unitary matrix
+    """
+    # Handle zero phase case: return identity
+    if np.abs(phase) < 1e-10:
+        return sparse.eye(system_size, format='csr', dtype=complex)
+    
+    # Create sparse identity matrix
+    U = sparse.eye(system_size, format='lil', dtype=complex)
+    
+    if i == j:
+        # Diagonal case: exp(-i*phase) on diagonal
+        U[i, i] = np.exp(-1j * phase)
+    else:
+        # Off-diagonal case: 2x2 block
+        # H_2x2 = [[0, phase], [conj(phase), 0]]
+        # Compute exp(-i*H_2x2)
+        H_2x2 = np.array([
+            [0, phase],
+            [np.conj(phase), 0]
+        ], dtype=complex)
+        
+        U_2x2 = expm(-1j * H_2x2)
+        
+        # Embed in full matrix
+        U[np.ix_([i, j], [i, j])] = U_2x2
+    
+    # Convert to CSR format for efficient multiplication
+    return U.tocsr()
 
 
 class HamiltonianTerm:
@@ -67,36 +116,10 @@ class HamiltonianTerm:
             
         Returns:
             system_size x system_size sparse CSR unitary matrix
-        """
-        # Handle zero strength case: return identity
-        if np.abs(self.strength) < 1e-10:
-            return sparse.eye(self.system_size, format='csr', dtype=complex)
-        
-        # Handle zero theta case: return identity
-        if np.abs(theta) < 1e-10:
-            return sparse.eye(self.system_size, format='csr', dtype=complex)
-        
-        # Create sparse identity matrix
-        U = sparse.eye(self.system_size, format='lil', dtype=complex)
-        
-        if self.i == self.j:
-            # Diagonal case: exp(-i*theta*strength) on diagonal
-            U[self.i, self.i] = np.exp(-1j * theta * self.strength)
-        else:
-            # Off-diagonal case: 2x2 block
-            H_2x2 = np.array([
-                [0, self.strength],
-                [np.conj(self.strength), 0]
-            ], dtype=complex)
-            
-            # Compute exp(-i*theta*H_2x2)
-            U_2x2 = expm(-1j * theta * H_2x2)
-            
-            # Embed in full matrix
-            U[np.ix_([self.i, self.j], [self.i, self.j])] = U_2x2
-        
-        # Convert to CSR format for efficient multiplication
-        return U.tocsr()
+        """        
+        # Compute phase = theta * strength and call cached function
+        phase = theta * self.strength
+        return _compute_term_unitary(self.i, self.j, phase, self.system_size)
 
 
 class Hamiltonian:
@@ -214,6 +237,9 @@ class VariationalCircuit:
         The circuit is constructed as a product of layers, where each layer applies
         unitaries from each Hamiltonian term in the specified order.
         
+        Caching is handled automatically at the term level via _compute_term_unitary,
+        which caches results based on (i, j, phase, system_size).
+        
         Args:
             term_order: Optional list specifying the order to apply terms.
                        If None, uses the order terms appear in hamiltonian.terms
@@ -237,12 +263,14 @@ class VariationalCircuit:
         Ud = sparse.eye(system_size, format='csr', dtype=complex)
         
         # Apply each layer
+        # Note: Caching is now handled at the term level in _compute_term_unitary
         for layer in range(self.num_layers):
             # Apply each term in the specified order
             for term_name in term_order:
                 theta = self.parameters[term_name][layer]
                 term = self.hamiltonian.terms[term_name]
                 U_term = term.exp_unitary(theta)
+                
                 # Multiply unitaries (sparse matrix multiplication)
                 Ud = U_term @ Ud
         

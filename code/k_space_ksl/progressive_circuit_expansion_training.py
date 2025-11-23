@@ -165,13 +165,13 @@ def _get_cached_hamiltonian_data(kx, ky, Jx, Jy, Jz, kappa):
     return system_hamiltonian, ground_state_matrix, E_gs, circuit_hamiltonian
 
 
-def simulate_single_kpoint(kx, ky, parameters, n_cycles, Jx, Jy, Jz, kappa):
+def simulate_single_kpoint(kx, ky, new_parameters, n_cycles, Jx, Jy, Jz, kappa):
     """
     Simulate variational circuit for a single k-point.
     
     Args:
         kx, ky: Momentum values
-        parameters: Dictionary with old 6-parameter structure
+        new_parameters: Dictionary with new 9-parameter structure
         n_cycles: Number of cooling cycles to perform
         Jx, Jy, Jz, kappa: Kitaev parameters
     
@@ -186,9 +186,6 @@ def simulate_single_kpoint(kx, ky, parameters, n_cycles, Jx, Jy, Jz, kappa):
     system_hamiltonian, ground_state_matrix, E_gs, circuit_hamiltonian = _get_cached_hamiltonian_data(
         kx, ky, Jx, Jy, Jz, kappa
     )
-    
-    # Convert parameters to new structure
-    new_parameters = convert_parameters_to_new_structure(parameters)
     
     # Create variational circuit
     circuit = VariationalCircuit(circuit_hamiltonian, new_parameters)
@@ -233,6 +230,9 @@ def simulate_grid(kx_list, ky_list, parameters, n_cycles, Jx, Jy, Jz, kappa, ver
             - E_diff: Array of shape (n_cycles, n_kx, n_ky) with energy differences
             - single_particle_dm: Array of shape (n_kx, n_ky, 6, 6) with density matrices
     """
+    # Convert parameters to new structure once (same for all k-points)
+    new_parameters = convert_parameters_to_new_structure(parameters)
+    
     n_kx = len(kx_list)
     n_ky = len(ky_list)
     
@@ -249,7 +249,7 @@ def simulate_grid(kx_list, ky_list, parameters, n_cycles, Jx, Jy, Jz, kappa, ver
                 print(f"  Processing k-point {point_count+1}/{total_points}: kx={kx:.4f}, ky={ky:.4f}")
             
             # Simulate this k-point
-            _, E_diff_list, _, dm = simulate_single_kpoint(kx, ky, parameters, n_cycles, Jx, Jy, Jz, kappa)
+            _, E_diff_list, _, dm = simulate_single_kpoint(kx, ky, new_parameters, n_cycles, Jx, Jy, Jz, kappa)
             
             # Store results
             for cycle in range(n_cycles):

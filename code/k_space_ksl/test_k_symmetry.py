@@ -14,7 +14,8 @@ if project_root not in sys.path:
 
 # Import from the same directory
 from progressive_circuit_expansion_training import (
-    simulate_single_kpoint
+    simulate_single_kpoint,
+    convert_parameters_to_new_structure
 )
 from k_space_KSL_model import create_KSL_hamiltonian, VariationalCircuit, KSLSingleParticleDensityMatrix
 
@@ -65,15 +66,18 @@ def test_k_symmetry(num_tests=100, n_cycles=5, p=5, verbose=True):
             'B': np.random.uniform(-1.0, 1.0, size=p),
         }
         
+        # Convert parameters to new structure once (same for both k and -k)
+        new_parameters = convert_parameters_to_new_structure(parameters)
+        
         # Simulate at k
         _, E_diff_list_k, E_gs_k, _ = simulate_single_kpoint(
-            kx, ky, parameters, n_cycles, Jx, Jy, Jz, kappa
+            kx, ky, new_parameters, n_cycles, Jx, Jy, Jz, kappa
         )
         E_final_k = E_diff_list_k[-1] if len(E_diff_list_k) > 0 else 0.0
         
         # Simulate at -k
         _, E_diff_list_negk, E_gs_negk, _ = simulate_single_kpoint(
-            -kx, -ky, parameters, n_cycles, Jx, Jy, Jz, kappa
+            -kx, -ky, new_parameters, n_cycles, Jx, Jy, Jz, kappa
         )
         E_final_negk = E_diff_list_negk[-1] if len(E_diff_list_negk) > 0 else 0.0
         
