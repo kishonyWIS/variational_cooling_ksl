@@ -145,7 +145,7 @@ The fermionic Hamiltonian in momentum space is:
 \begin{align}
 H(t)=\sum_{\bm{k}}\bm{\Psi}_{\bm{k}}^\dagger H_{\bm{k}}(t)\bm{\Psi}_{\bm{k}},
 \end{align}
-where $\bm{\Psi}_{\bm{k}}^\dagger=\begin{pmatrix}c_{(\bm{k},A)}^{z\dagger}&
+where in the original unit cell description, $\bm{\Psi}_{\bm{k}}^\dagger=\begin{pmatrix}c_{(\bm{k},A)}^{z\dagger}&
 c_{(\bm{k},B)}^{z\dagger}&
 c_{(\bm{k},A)}^{y\dagger}&
 c_{(\bm{k},B)}^{y\dagger}&
@@ -162,7 +162,7 @@ ig(t)\mathbb{I} & 0 & -iB(t)\mathbb{I}\\
 \label{eq:Hk}
 \end{align}
 
-Here, $h_{\bm{k}}$ is the $2 \times 2$ system Hamiltonian:
+In the enlarged $2\times2$ supercell description used for the variational circuit, the system Hamiltonian for the $c^z$ fermions becomes an $8 \times 8$ matrix $H(\mathbf{K})$ (see Sec.~\ref{sec:enlarged_unit_cell}), where $\mathbf{K}$ is the Bloch wavevector for the supercell. Here, $h_{\bm{k}}$ is the $2 \times 2$ system Hamiltonian in the original unit cell description:
 \begin{align}
 h_{\bm{k}}&=\begin{pmatrix} \Delta(\bm{k}) & if(\bm{k})\\
 -if(-\bm{k}) & -\Delta(\bm{k})
@@ -176,6 +176,34 @@ f(\bm{k})&=\mathcal{J}_{x}+\mathcal{J}_{y}e^{-ik_{x}}+\mathcal{J}_{z}e^{-ik_{y}}
 \end{align}
 
 The key advantage of this momentum-space description is that different $\bm{k}$ points are decoupled, allowing us to analyze the cooling protocol independently at each momentum point.
+
+\subsection{Enlarged Unit Cell and Decomposition of $\kappa$}
+\label{sec:enlarged_unit_cell}
+
+The $\kappa$ as written in Eq.~\eqref{eq:H_KSL} is a sum of terms which do not act on disjoint sets of qubits.
+To enable the application of the $\kappa$ term gate-wise in the variational circuit, we partition $\kappa$ into vertex-disjoint subsets by working with an enlarged $2\times2$ supercell structure.
+The original unit cell with two sites (one per sublattice) is enlarged to a supercell containing four internal offsets $r_0=(0,0)$, $r_1=(1,0)$, $r_2=(0,1)$, and $r_3=(1,1)$ within each sublattice.
+This results in a total of $2 \times 3 \times 4 = 24$ Majorana fermion modes per supercell [2 sublattices $\times$ 3 labels ($x,y,z$) $\times$ 4 offsets], compared to the original $2 \times 3 = 6$ modes per unit cell.
+
+The three-spin $\kappa$ term can be decomposed into $12$ vertex-disjoint subsets, indexed by sublattice class $S\in\{A,B\}$ (A--A or B--B), next-nearest-neighbor direction $d\in\{+i,\,-j,\,j-i\}$, and parity $p\in\{\mathrm{even},\mathrm{odd}\}$. The decomposition is illustrated in Fig.~\ref{fig:kappa_partition}, where different colors represent different subsets that can be applied simultaneously gate-wise.
+
+In the Bloch basis for the supercell, we define $\mathbf{K}\cdot\mathbf{a} = 2K_i$ and $\mathbf{K}\cdot\mathbf{b} = 2K_j$, where $\mathbf{a} = 2\hat{i}$ and $\mathbf{b} = 2\hat{j}$ are the supercell lattice vectors. The system Hamiltonian for the $c^z$ fermions becomes an $8 \times 8$ matrix in this basis, with the structure:
+\begin{align}
+H(\mathbf{K})=
+\begin{pmatrix}
+H_{AA} & H_{AB}\\
+H_{AB}^\dagger & H_{BB}
+\end{pmatrix},
+\end{align}
+where $H_{AA}$ and $H_{BB}$ contain the $\kappa$ terms (with opposite signs for A and B sublattices), and $H_{AB}$ contains the nearest-neighbor $J$ terms connecting A and B sublattices.
+
+\begin{figure}
+\begin{centering}
+\includegraphics[width=(\textwidth-\columnsep)/2]{figures/kappa_partition.pdf}
+\par\end{centering}
+\caption{\textbf{Decomposition of the $\kappa$ term into vertex-disjoint subsets.} The three-spin $\kappa$ interactions are partitioned into $12$ commuting blocks. Different colors represent different subsets that can be applied simultaneously as they act on disjoint sets of qubits. Each subset is indexed by sublattice class (A--A or B--B), direction ($+i$, $-j$, or $j-i$), and parity (even or odd).}
+\label{fig:kappa_partition}
+\end{figure}
 
 \subsection{Cooling Protocol}
 
@@ -214,12 +242,12 @@ Each term corresponds to exponentiation of the corresponding Hamiltonian compone
 \item $U_{J_x}(\alpha_{x,\ell}) = \exp\left(-i (\alpha_{x,\ell}/2) \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in x\text{-bonds}}\sigma_{\mathbf{I}}^{x}\sigma_{\mathbf{J}}^{x}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_x$ bond interactions
 \item $U_{J_y}(\alpha_{y,\ell}) = \exp\left(-i (\alpha_{y,\ell}/2) \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in y\text{-bonds}}\sigma_{\mathbf{I}}^{y}\sigma_{\mathbf{J}}^{y}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_y$ bond interactions  
 \item $U_{J_z}(\alpha_{z,\ell}) = \exp\left(-i (\alpha_{z,\ell}/2) \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in z\text{-bonds}}\sigma_{\mathbf{I}}^{z}\sigma_{\mathbf{J}}^{z}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_z$ bond interactions
-\item $U_{\kappa}(\delta_\ell) = \exp\left(-i (\delta_\ell/2) \sum_{\langle\langle \mathbf{J},\mathbf{K},\mathbf{L}\rangle\rangle}\sigma_{\mathbf{J}}^x\tau_{\mathbf{J}}^z\sigma_{\mathbf{K}}^y\tau_{\mathbf{K}}^z\sigma_{\mathbf{L}}^z\right)$ for the three-spin $\kappa$ term
+\item $U_{\kappa}(\delta_\ell) = \prod_{S,d,p} \exp\left(-i (\delta_\ell/2) H_{\kappa}^{S,d,p}\right)$ for the three-spin $\kappa$ term, where the product is over the $12$ vertex-disjoint subsets $H_{\kappa}^{S,d,p}$ (see Fig.~\ref{fig:kappa_partition}). Each subset $H_{\kappa}^{S,d,p}$ acts on disjoint sets of qubits, allowing exact exponentiation without intra-block Trotter error.
 \item $U_g(\gamma_\ell) = \exp\left(-i (\gamma_\ell/2) \sum_{\mathbf{J}}\tau_{\mathbf{J}}^{x}\right)$ for the system-bath coupling
 \item $U_B(\beta_\ell) = \exp\left(-i (\beta_\ell/2) \sum_{\mathbf{J}}s_{\mathbf{J}}\tau_{\mathbf{J}}^{z}\right)$ for the bath Zeeman field, where $s_{\mathbf{J}} = \pm 1$ is the measurement outcome of $\tau^z_{\mathbf{J}}$ from the previous cycle
 \end{itemize}
 
-The variational parameters $\{\alpha_{x,\ell}, \alpha_{y,\ell}, \alpha_{z,\ell}, \beta_\ell, \gamma_\ell, \delta_\ell\}_{\ell=1}^p$ are all periodic modulo $2\pi$, and are optimized to minimize the energy density in the steady state achieved after multiple cooling cycles.
+The variational parameters $\{\alpha_{x,\ell}, \alpha_{y,\ell}, \alpha_{z,\ell}, \beta_\ell, \gamma_\ell, \delta_\ell\}_{\ell=1}^p$ are all periodic modulo $2\pi$, and are optimized to minimize the energy density in the steady state achieved after multiple cooling cycles. The decomposition of the $\kappa$ term into vertex-disjoint subsets ensures that each subset can be exponentiated exactly, eliminating Trotter errors within each block and improving the accuracy of the variational circuit.
 
 \section{Training Regimen}
 

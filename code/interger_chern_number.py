@@ -104,13 +104,10 @@ def qwx_projector_grid(Nx=31, Ny=31, m=-1.0):
             P[i, j] = np.outer(u, u.conj())
     return P
 
-# Example:
-# P = qwx_projector_grid(41, 41, m=-1.0)
-# C, Craw, F = chern_fhs_from_projector(P, purify=False, return_debug=True)
-# print(C, Craw, _.get('warnings', {}))
 
 
-single_particle_dm = qwx_projector_grid(41, 41, m=-1.0)
-C = chern_from_mixed_spdm(
-    single_particle_dm)
-print("Chern =", C)
+if __name__ == "__main__":
+    single_particle_dm = qwx_projector_grid(41, 41, m=-1.0)
+    C = chern_from_mixed_spdm(
+        single_particle_dm)
+    print("Chern =", C)
