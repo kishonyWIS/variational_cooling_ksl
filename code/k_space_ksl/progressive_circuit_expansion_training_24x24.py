@@ -33,12 +33,11 @@ if code_dir not in sys.path:
 from ksl_24x24_model import (
     create_KSL_24x24_hamiltonian,
     KSL24SingleParticleDensityMatrix,
-    convert_k_to_K,
     get_all_kappa_term_names
 )
 from hamiltonian_base import VariationalCircuit
 from time_dependence_functions import get_g, get_B
-from interger_chern_number import chern_from_mixed_spdm
+from interger_chern_number import chern_from_mixed_spdm, get_chern_number_from_single_particle_dm, chern_from_spdm_with_threshold_eigenvalues
 
 # Import reusable functions from 6×6 training file
 from progressive_circuit_expansion_training import (
@@ -124,24 +123,21 @@ def _get_cached_hamiltonian_data(kx, ky, Jx, Jy, Jz, kappa):
     that don't depend on variational parameters, only on (kx, ky, Jx, Jy, Jz, kappa).
     
     Args:
-        kx, ky: Momentum values (will be converted to K_i, K_j)
+        kx, ky: Momentum values
         Jx, Jy, Jz, kappa: Kitaev parameters
     
     Returns:
         tuple: (system_hamiltonian, ground_state_matrix, E_gs, circuit_hamiltonian)
     """
-    # Convert k-space to K-space for 24×24 model
-    K_i, K_j = convert_k_to_K(kx, ky)
-    
     # Create system Hamiltonian (for energy measurement and ground state)
-    system_hamiltonian = create_KSL_24x24_hamiltonian(K_i, K_j, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=0.0)
+    system_hamiltonian = create_KSL_24x24_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=0.0)
     
     # Get ground state
     ground_state_matrix = system_hamiltonian.get_ground_state()
     E_gs = system_hamiltonian.compute_energy(ground_state_matrix)
     
     # Create circuit Hamiltonian (g and B set to 1.0 to ensure terms exist)
-    circuit_hamiltonian = create_KSL_24x24_hamiltonian(K_i, K_j, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=1.0, B=1.0)
+    circuit_hamiltonian = create_KSL_24x24_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=1.0, B=1.0)
     
     return system_hamiltonian, ground_state_matrix, E_gs, circuit_hamiltonian
 
@@ -261,9 +257,9 @@ def simulate_grid_with_analysis(kx_list, ky_list, parameters, n_cycles, Jx, Jy, 
     
     # Calculate Chern numbers
     # For 24×24 model, system modes are 0-7 (c^z), bath modes are 8-23 (c^y and c^x)
-    total_chern_number = chern_from_mixed_spdm(single_particle_dm)
-    system_chern_number = chern_from_mixed_spdm(single_particle_dm[:, :, :8, :8])  # First 8 modes (c^z)
-    bath_chern_number = chern_from_mixed_spdm(single_particle_dm[:, :, 8:, 8:])  # Remaining 16 modes (c^y, c^x)
+    total_chern_number = chern_from_spdm_with_threshold_eigenvalues(single_particle_dm)
+    system_chern_number = chern_from_spdm_with_threshold_eigenvalues(single_particle_dm[:, :, :8, :8])  # First 8 modes (c^z)
+    bath_chern_number = chern_from_spdm_with_threshold_eigenvalues(single_particle_dm[:, :, 8:, 8:])  # Remaining 16 modes (c^y, c^x)
     
     # Calculate average energy density (use final cycle if multiple cycles)
     if n_cycles == 1:

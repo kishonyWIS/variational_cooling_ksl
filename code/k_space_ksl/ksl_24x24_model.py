@@ -19,23 +19,6 @@ import numpy as np
 from hamiltonian_base import Hamiltonian, SingleParticleDensityMatrix
 
 
-def convert_k_to_K(kx, ky):
-    """
-    Convert k-space coordinates to K-space (Bloch wavevector for supercell).
-    
-    From decomposing_kappa.tex:
-    K·a = 2K_i, K·b = 2K_j
-    where a = 2i, b = 2j, so K_i = kx/2, K_j = ky/2
-    
-    Args:
-        kx, ky: Original momentum space coordinates
-    
-    Returns:
-        tuple: (K_i, K_j) Bloch wavevector components
-    """
-    return kx / 2.0, ky / 2.0
-
-
 def get_kappa_term_name(S, d, p, component):
     """
     Generate a name for a kappa term.
@@ -108,9 +91,9 @@ class KSL24SingleParticleDensityMatrix(SingleParticleDensityMatrix):
             self.reset(12 + r, 20 + r)
 
 
-def create_KSL_24x24_hamiltonian(K_i, K_j, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0, g=0.0, B=0.0):
+def create_KSL_24x24_hamiltonian(kx, ky, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0, g=0.0, B=0.0):
     """
-    Create KSL 24×24 Hamiltonian at Bloch wavevector (K_i, K_j) following decomposing_kappa.tex.
+    Create KSL 24×24 Hamiltonian at momentum (kx, ky) following decomposing_kappa.tex.
     
     The Hamiltonian has a 24×24 structure with:
     - 8×8 system block for c^z fermions (modes 0-7)
@@ -119,7 +102,7 @@ def create_KSL_24x24_hamiltonian(K_i, K_j, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0, g=
     - Couplings between blocks via g and B terms
     
     Args:
-        K_i, K_j: Bloch wavevector components (not kx, ky - use convert_k_to_K to convert)
+        kx, ky: Momentum space coordinates
         Jx, Jy, Jz: Kitaev exchange couplings (default 1.0)
         kappa: three-spin interaction strength (default 1.0)
               This will be distributed to 24 separate kappa terms in the variational circuit
@@ -153,23 +136,23 @@ def create_KSL_24x24_hamiltonian(K_i, K_j, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0, g=
     # H_AB[i,j] where i is A-sublattice index (0-3) and j is B-sublattice index (0-3)
     # In full 8×8 matrix: A modes are 0-3, B modes are 4-7
     # H_AB[1,0] = iJ_y means A_r1 (mode 1) -> B_r0 (mode 4)
-    # H_AB[0,1] = iJ_y*e^{+2iK_i} means A_r0 (mode 0) -> B_r1 (mode 5)
+    # H_AB[0,1] = iJ_y*e^{+ikx} means A_r0 (mode 0) -> B_r1 (mode 5)
     hamiltonian.add_term('Jy_A1_B0', 1, 4, 1j * Jy)  # A_r1 -> B_r0
-    hamiltonian.add_term('Jy_A0_B1', 0, 5, 1j * Jy * np.exp(+2j * K_i))  # A_r0 -> B_r1 (with phase)
+    hamiltonian.add_term('Jy_A0_B1', 0, 5, 1j * Jy * np.exp(+1j * kx))  # A_r0 -> B_r1 (with phase)
     # H_AB[3,2] = iJ_y means A_r3 (mode 3) -> B_r2 (mode 6)
-    # H_AB[2,3] = iJ_y*e^{+2iK_i} means A_r2 (mode 2) -> B_r3 (mode 7)
+    # H_AB[2,3] = iJ_y*e^{+ikx} means A_r2 (mode 2) -> B_r3 (mode 7)
     hamiltonian.add_term('Jy_A3_B2', 3, 6, 1j * Jy)  # A_r3 -> B_r2
-    hamiltonian.add_term('Jy_A2_B3', 2, 7, 1j * Jy * np.exp(+2j * K_i))  # A_r2 -> B_r3 (with phase)
+    hamiltonian.add_term('Jy_A2_B3', 2, 7, 1j * Jy * np.exp(+1j * kx))  # A_r2 -> B_r3 (with phase)
     
     # J_z terms: Following decomposing_kappa.tex line 119
     # H_AB[2,0] = iJ_z means A_r2 (mode 2) -> B_r0 (mode 4)
-    # H_AB[0,2] = iJ_z*e^{+2iK_j} means A_r0 (mode 0) -> B_r2 (mode 6)
+    # H_AB[0,2] = iJ_z*e^{+iky} means A_r0 (mode 0) -> B_r2 (mode 6)
     hamiltonian.add_term('Jz_A2_B0', 2, 4, 1j * Jz)  # A_r2 -> B_r0
-    hamiltonian.add_term('Jz_A0_B2', 0, 6, 1j * Jz * np.exp(+2j * K_j))  # A_r0 -> B_r2 (with phase)
+    hamiltonian.add_term('Jz_A0_B2', 0, 6, 1j * Jz * np.exp(+1j * ky))  # A_r0 -> B_r2 (with phase)
     # H_AB[3,1] = iJ_z means A_r3 (mode 3) -> B_r1 (mode 5)
-    # H_AB[1,3] = iJ_z*e^{+2iK_j} means A_r1 (mode 1) -> B_r3 (mode 7)
+    # H_AB[1,3] = iJ_z*e^{+iky} means A_r1 (mode 1) -> B_r3 (mode 7)
     hamiltonian.add_term('Jz_A3_B1', 3, 5, 1j * Jz)  # A_r3 -> B_r1
-    hamiltonian.add_term('Jz_A1_B3', 1, 7, 1j * Jz * np.exp(+2j * K_j))  # A_r1 -> B_r3 (with phase)
+    hamiltonian.add_term('Jz_A1_B3', 1, 7, 1j * Jz * np.exp(+1j * ky))  # A_r1 -> B_r3 (with phase)
     
     # ============================================================
     # Kappa terms: 24 terms (12 blocks × 2 components)
@@ -194,8 +177,8 @@ def create_KSL_24x24_hamiltonian(K_i, K_j, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0, g=
     hamiltonian.add_term(get_kappa_term_name('A', '+i', 'even', 'first'), 0, 1, 1j * kappa)  # r0-r1 pair
     hamiltonian.add_term(get_kappa_term_name('A', '+i', 'even', 'second'), 2, 3, 1j * kappa)  # r2-r3 pair
     # Direction +i, odd block
-    hamiltonian.add_term(get_kappa_term_name('A', '+i', 'odd', 'first'), 0, 1, -1j * kappa * np.exp(-2j * K_i))  # r0-r1 pair
-    hamiltonian.add_term(get_kappa_term_name('A', '+i', 'odd', 'second'), 2, 3, -1j * kappa * np.exp(-2j * K_i))  # r2-r3 pair
+    hamiltonian.add_term(get_kappa_term_name('A', '+i', 'odd', 'first'), 0, 1, -1j * kappa * np.exp(-1j * kx))  # r0-r1 pair
+    hamiltonian.add_term(get_kappa_term_name('A', '+i', 'odd', 'second'), 2, 3, -1j * kappa * np.exp(-1j * kx))  # r2-r3 pair
     
     # Direction -j, even block: H_κ^{A,-j,even} = -i*κ_{A,-j,e}*(c_{r0}c_{r2} + c_{r1}c_{r3})
     #   - first component: c_{r0}c_{r2} → [0,2]
@@ -203,39 +186,39 @@ def create_KSL_24x24_hamiltonian(K_i, K_j, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0, g=
     hamiltonian.add_term(get_kappa_term_name('A', '-j', 'even', 'first'), 0, 2, -1j * kappa)  # r0-r2 pair
     hamiltonian.add_term(get_kappa_term_name('A', '-j', 'even', 'second'), 1, 3, -1j * kappa)  # r1-r3 pair
     # Direction -j, odd block
-    hamiltonian.add_term(get_kappa_term_name('A', '-j', 'odd', 'first'), 0, 2, 1j * kappa * np.exp(-2j * K_j))  # r0-r2 pair
-    hamiltonian.add_term(get_kappa_term_name('A', '-j', 'odd', 'second'), 1, 3, 1j * kappa * np.exp(-2j * K_j))  # r1-r3 pair
+    hamiltonian.add_term(get_kappa_term_name('A', '-j', 'odd', 'first'), 0, 2, 1j * kappa * np.exp(-1j * ky))  # r0-r2 pair
+    hamiltonian.add_term(get_kappa_term_name('A', '-j', 'odd', 'second'), 1, 3, 1j * kappa * np.exp(-1j * ky))  # r1-r3 pair
     
     # Direction j-i, even block: H_κ^{A,j-i,even} = i*κ_{A,j-i,e}*(c_{r1}c_{r2} + c_{r3}c_{r0+})
     #   - first component: c_{r1}c_{r2} → [1,2]
-    #   - second component: c_{r3}c_{r0+} → [3,0] with phase e^{+2iK_j}
+    #   - second component: c_{r3}c_{r0+} → [3,0] with phase e^{+iky}
     hamiltonian.add_term(get_kappa_term_name('A', 'j-i', 'even', 'first'), 1, 2, 1j * kappa)  # r1-r2 pair
-    hamiltonian.add_term(get_kappa_term_name('A', 'j-i', 'even', 'second'), 3, 0, 1j * kappa * np.exp(+2j * K_j))  # r3-r0 pair
+    hamiltonian.add_term(get_kappa_term_name('A', 'j-i', 'even', 'second'), 3, 0, 1j * kappa * np.exp(+1j * ky))  # r3-r0 pair
     # Direction j-i, odd block
-    hamiltonian.add_term(get_kappa_term_name('A', 'j-i', 'odd', 'first'), 1, 2, -1j * kappa * np.exp(+2j * (K_i - K_j)))  # r1-r2 pair
-    hamiltonian.add_term(get_kappa_term_name('A', 'j-i', 'odd', 'second'), 3, 0, -1j * kappa * np.exp(+2j * K_i))  # r3-r0 pair
+    hamiltonian.add_term(get_kappa_term_name('A', 'j-i', 'odd', 'first'), 1, 2, -1j * kappa * np.exp(+1j * (kx - ky)))  # r1-r2 pair
+    hamiltonian.add_term(get_kappa_term_name('A', 'j-i', 'odd', 'second'), 3, 0, -1j * kappa * np.exp(+1j * kx))  # r3-r0 pair
     
     # B--B block kappa terms (lines 104-112) - opposite signs
     # Direction +i, even block (opposite sign from A)
     hamiltonian.add_term(get_kappa_term_name('B', '+i', 'even', 'first'), 4, 5, -1j * kappa)  # B_r0-B_r1 pair
     hamiltonian.add_term(get_kappa_term_name('B', '+i', 'even', 'second'), 6, 7, -1j * kappa)  # B_r2-B_r3 pair
     # Direction +i, odd block
-    hamiltonian.add_term(get_kappa_term_name('B', '+i', 'odd', 'first'), 4, 5, 1j * kappa * np.exp(-2j * K_i))  # B_r0-B_r1 pair
-    hamiltonian.add_term(get_kappa_term_name('B', '+i', 'odd', 'second'), 6, 7, 1j * kappa * np.exp(-2j * K_i))  # B_r2-B_r3 pair
+    hamiltonian.add_term(get_kappa_term_name('B', '+i', 'odd', 'first'), 4, 5, 1j * kappa * np.exp(-1j * kx))  # B_r0-B_r1 pair
+    hamiltonian.add_term(get_kappa_term_name('B', '+i', 'odd', 'second'), 6, 7, 1j * kappa * np.exp(-1j * kx))  # B_r2-B_r3 pair
     
     # Direction -j, even block (opposite sign from A)
     hamiltonian.add_term(get_kappa_term_name('B', '-j', 'even', 'first'), 4, 6, 1j * kappa)  # B_r0-B_r2 pair
     hamiltonian.add_term(get_kappa_term_name('B', '-j', 'even', 'second'), 5, 7, 1j * kappa)  # B_r1-B_r3 pair
     # Direction -j, odd block
-    hamiltonian.add_term(get_kappa_term_name('B', '-j', 'odd', 'first'), 4, 6, -1j * kappa * np.exp(-2j * K_j))  # B_r0-B_r2 pair
-    hamiltonian.add_term(get_kappa_term_name('B', '-j', 'odd', 'second'), 5, 7, -1j * kappa * np.exp(-2j * K_j))  # B_r1-B_r3 pair
+    hamiltonian.add_term(get_kappa_term_name('B', '-j', 'odd', 'first'), 4, 6, -1j * kappa * np.exp(-1j * ky))  # B_r0-B_r2 pair
+    hamiltonian.add_term(get_kappa_term_name('B', '-j', 'odd', 'second'), 5, 7, -1j * kappa * np.exp(-1j * ky))  # B_r1-B_r3 pair
     
     # Direction j-i, even block (opposite sign from A)
     hamiltonian.add_term(get_kappa_term_name('B', 'j-i', 'even', 'first'), 5, 6, -1j * kappa)  # B_r1-B_r2 pair
-    hamiltonian.add_term(get_kappa_term_name('B', 'j-i', 'even', 'second'), 7, 4, -1j * kappa * np.exp(+2j * K_j))  # B_r3-B_r0 pair
+    hamiltonian.add_term(get_kappa_term_name('B', 'j-i', 'even', 'second'), 7, 4, -1j * kappa * np.exp(+1j * ky))  # B_r3-B_r0 pair
     # Direction j-i, odd block
-    hamiltonian.add_term(get_kappa_term_name('B', 'j-i', 'odd', 'first'), 5, 6, 1j * kappa * np.exp(+2j * (K_i - K_j)))  # B_r1-B_r2 pair
-    hamiltonian.add_term(get_kappa_term_name('B', 'j-i', 'odd', 'second'), 7, 4, 1j * kappa * np.exp(+2j * K_i))  # B_r3-B_r0 pair
+    hamiltonian.add_term(get_kappa_term_name('B', 'j-i', 'odd', 'first'), 5, 6, 1j * kappa * np.exp(+1j * (kx - ky)))  # B_r1-B_r2 pair
+    hamiltonian.add_term(get_kappa_term_name('B', 'j-i', 'odd', 'second'), 7, 4, 1j * kappa * np.exp(+1j * kx))  # B_r3-B_r0 pair
     
     # ============================================================
     # g terms: system-bath coupling generalized to all 4 offsets

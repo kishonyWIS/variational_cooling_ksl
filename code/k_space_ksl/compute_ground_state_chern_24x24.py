@@ -17,9 +17,9 @@ code_dir = os.path.join(os.path.dirname(__file__), '..')
 if code_dir not in sys.path:
     sys.path.insert(0, code_dir)
 
-from ksl_24x24_model import create_KSL_24x24_hamiltonian, convert_k_to_K
+from ksl_24x24_model import create_KSL_24x24_hamiltonian
 from progressive_circuit_expansion_training_24x24 import get_k_grid
-from interger_chern_number import chern_from_mixed_spdm, get_chern_number_from_single_particle_dm
+from interger_chern_number import chern_from_mixed_spdm, get_chern_number_from_single_particle_dm, chern_from_spdm_with_threshold_eigenvalues
 
 
 def compute_ground_state_chern(kx_list, ky_list, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0, 
@@ -55,12 +55,9 @@ def compute_ground_state_chern(kx_list, ky_list, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1
             if verbose and point_count % 10 == 0:
                 print(f"  Processing k-point {point_count+1}/{total_points}: kx={kx:.4f}, ky={ky:.4f}")
             
-            # Convert k-space to K-space for 24×24 model
-            K_i, K_j = convert_k_to_K(kx, ky)
-            
             # Create system Hamiltonian (g=0, B=0 for ground state)
             system_hamiltonian = create_KSL_24x24_hamiltonian(
-                K_i, K_j, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=0.0
+                kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=0.0
             )
             
             # Get ground state density matrix
@@ -73,10 +70,10 @@ def compute_ground_state_chern(kx_list, ky_list, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1
     
     # Compute Chern numbers
     # System modes: 0-7 (c^z fermions)
-    system_chern = chern_from_mixed_spdm(single_particle_dm[:, :, :8, :8])
+    system_chern = chern_from_spdm_with_threshold_eigenvalues(single_particle_dm[:, :, :8, :8])
     
     # Total Chern number: all 24 modes
-    total_chern = chern_from_mixed_spdm(single_particle_dm)
+    total_chern = chern_from_spdm_with_threshold_eigenvalues(single_particle_dm)
     
     if verbose:
         print(f"\nChern number (system modes 0-7): {system_chern:.6f}")

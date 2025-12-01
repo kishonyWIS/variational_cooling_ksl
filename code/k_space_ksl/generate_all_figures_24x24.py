@@ -131,14 +131,175 @@ def plot_energy_vs_cycles(res_val=3, p_val=5, max_cycles=20, Jx=JX, Jy=JY, Jz=JZ
     plt.close()
 
 
-def plot_energy_vs_p_by_res(res_vals=None, p_vals=None, Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
+def plot_energy_and_chern_vs_p(res_vals=None, p_vals=None, Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
     """
-    Generate energy_vs_p_by_res.pdf - Energy density vs. circuit depth p for different training system sizes
+    Generate both energy_vs_p_by_res.pdf and chern_vs_p.pdf in a single pass.
+    This avoids redundant computation by calling simulate_grid_with_analysis only once per grid.
     
     Args:
         res_vals: list of res values to plot (default: [1, 2, 3, 4])
         p_vals: list of p values to plot (default: [2, 3, 4, 5, 6, 7])
     """
+    if res_vals is None:
+        res_vals = [1, 2, 3, 4]
+    if p_vals is None:
+        p_vals = [2, 3, 4, 5, 6, 7]
+    
+    print(f"\n{'='*60}")
+    print("Generating energy_vs_p_by_res.pdf and chern_vs_p.pdf (24×24 model)")
+    print(f"{'='*60}")
+    
+    # Create test grid (fixed for all res values)
+    n_k_points_test = 6 * 20  # 120
+    kx_list_test = get_k_grid(n_k_points_test)
+    ky_list_test = get_k_grid(n_k_points_test)
+    
+    # Initialize figure for energy plot
+    plt.figure(figsize=FIG_SIZE)
+    
+    # Store data for both plots
+    energy_data = {}  # {res: {'train': [...], 'test': [...], 'p_vals': [...]}}
+    chern_data = {}   # {res: {'train': [...], 'test': [...], 'p_vals': [...]}}
+    
+    for res in res_vals:
+        print(f"Processing res={res}...")
+        
+        # Create training grid for this res
+        n_k_points_train = 6 * res
+        kx_list_train = get_k_grid(n_k_points_train)
+        ky_list_train = get_k_grid(n_k_points_train)
+        
+        # Initialize lists for this res
+        energy_density_train_list = []
+        energy_density_test_list = []
+        system_chern_train_list = []
+        system_chern_test_list = []
+        p_vals_valid = []
+        
+        for p_val in p_vals:
+            print(f"  Evaluating p={p_val}...")
+            
+            try:
+                # Load parameters
+                strength_durations = load_optimized_parameters_for_res_p(res, p_val, input_dir=PARAMS_DIR_24X24)
+                
+                # Run simulation on training grid (use N_CYCLES_STEADY for convergence)
+                # Extract both energy_density and system_chern from single call
+                _, _, _, system_chern_tr, _, energy_density_train = simulate_grid_with_analysis(
+                    kx_list_train, ky_list_train, strength_durations, N_CYCLES_STEADY, Jx, Jy, Jz, kappa
+                )
+                
+                # Run simulation on test grid (use N_CYCLES_STEADY for convergence)
+                # Extract both energy_density and system_chern from single call
+                _, _, _, system_chern_te, _, energy_density_test = simulate_grid_with_analysis(
+                    kx_list_test, ky_list_test, strength_durations, N_CYCLES_STEADY, Jx, Jy, Jz, kappa
+                )
+                
+                # Store all results
+                energy_density_train_list.append(energy_density_train)
+                energy_density_test_list.append(energy_density_test)
+                system_chern_train_list.append(system_chern_tr)
+                system_chern_test_list.append(system_chern_te)
+                p_vals_valid.append(p_val)
+                
+                print(f"    Energy density (train): {energy_density_train:.6f}, Energy density (test): {energy_density_test:.6f}")
+                print(f"    System $\\nu$ (train): {system_chern_tr:.4f}, System $\\nu$ (test): {system_chern_te:.4f}")
+                
+            except (FileNotFoundError, KeyError) as e:
+                print(f"    Warning: Could not evaluate p={p_val}: {e}")
+                continue
+        
+        if len(energy_density_test_list) == 0:
+            print(f"  Warning: No valid data points for res={res}, skipping...")
+            continue
+        
+        # Store data for this res
+        energy_data[res] = {
+            'train': energy_density_train_list,
+            'test': energy_density_test_list,
+            'p_vals': p_vals_valid
+        }
+        chern_data[res] = {
+            'train': system_chern_train_list,
+            'test': system_chern_test_list,
+            'p_vals': p_vals_valid
+        }
+        
+        # Plot energy data (test solid, train dashed)
+        line_test, = plt.plot(p_vals_valid, energy_density_test_list, "-o", 
+                             label=f"{res*6}", linewidth=2)
+        color = line_test.get_color()
+        plt.plot(p_vals_valid, energy_density_train_list, "--o", color=color, 
+                alpha=0.8, linewidth=1.5)
+    
+    # Finalize energy plot
+    plt.xlabel("$p$", fontsize=FONT_SIZE_LABELS)
+    plt.ylabel("Energy density", fontsize=FONT_SIZE_LABELS)
+    plt.grid(True, alpha=0.3)
+    # set y to start from 0 and extend to 1.05 times the maximum value
+    plt.ylim(0, max(energy_density_train_list + energy_density_test_list)*1.05)
+    plt.legend(title="$L_{\\text{train}}$", title_fontsize=FONT_SIZE_LABELS, 
+               fontsize=FONT_SIZE_LEGEND, ncol=2)
+    plt.tick_params(labelsize=FONT_SIZE_TICKS)
+    plt.tight_layout()
+    
+    # Save energy figure
+    fig_path = os.path.join(FIGURES_DIR, 'energy_vs_p_by_res_24x24.pdf')
+    plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+    print(f"Saved energy_vs_p_by_res_24x24.pdf to {fig_path}")
+    plt.close()
+    
+    # Create Chern plot
+    plt.figure(figsize=FIG_SIZE)
+    
+    for res in res_vals:
+        if res not in chern_data:
+            continue
+        
+        data = chern_data[res]
+        p_vals_valid = data['p_vals']
+        system_chern_test = data['test']
+        system_chern_train = data['train']
+        
+        # Plot test (solid) and train (dashed) with same color
+        line_test, = plt.plot(p_vals_valid, system_chern_test, "-o", 
+                             label=f"{res*6}", linewidth=2)
+        color = line_test.get_color()
+        plt.plot(p_vals_valid, system_chern_train, "--o", color=color, 
+                alpha=0.8, linewidth=1.5)
+    
+    # Add horizontal line at target value
+    plt.axhline(y=1.0, color='gray', linestyle=':', alpha=0.5, linewidth=1)
+    
+    plt.xlabel("$p$", fontsize=FONT_SIZE_LABELS)
+    plt.ylabel("$\\nu$", fontsize=FONT_SIZE_LABELS)
+    plt.grid(True, alpha=0.3)
+    plt.legend(title="$L_{\\text{train}}$", title_fontsize=FONT_SIZE_LABELS, 
+               fontsize=FONT_SIZE_LEGEND, ncol=2)
+    plt.tick_params(labelsize=FONT_SIZE_TICKS)
+    plt.tight_layout()
+    
+    # Save Chern figure
+    fig_path = os.path.join(FIGURES_DIR, 'chern_vs_p_24x24.pdf')
+    plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"Saved chern_vs_p_24x24.pdf to {fig_path}")
+
+
+def plot_energy_vs_p_by_res(res_vals=None, p_vals=None, Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
+    """
+    Generate energy_vs_p_by_res.pdf - Energy density vs. circuit depth p for different training system sizes.
+    
+    This function is a wrapper that calls the combined function for efficiency.
+    For backward compatibility, it can be called independently, but it's more efficient
+    to call plot_energy_and_chern_vs_p() if both plots are needed.
+    
+    Args:
+        res_vals: list of res values to plot (default: [1, 2, 3, 4])
+        p_vals: list of p values to plot (default: [2, 3, 4, 5, 6, 7])
+    """
+    # For backward compatibility, we'll still compute separately if called alone
+    # But recommend using plot_energy_and_chern_vs_p for both
     if res_vals is None:
         res_vals = [1, 2, 3, 4]
     if p_vals is None:
@@ -223,12 +384,18 @@ def plot_energy_vs_p_by_res(res_vals=None, p_vals=None, Jx=JX, Jy=JY, Jz=JZ, kap
 
 def plot_chern_vs_p(res_vals=None, p_vals=None, Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
     """
-    Generate chern_vs_p.pdf - Finite size spectral Chern number (ν) vs. circuit depth p
+    Generate chern_vs_p.pdf - Finite size spectral Chern number (ν) vs. circuit depth p.
+    
+    This function is a wrapper that calls the combined function for efficiency.
+    For backward compatibility, it can be called independently, but it's more efficient
+    to call plot_energy_and_chern_vs_p() if both plots are needed.
     
     Args:
         res_vals: list of res values to plot (default: [1, 2, 3, 4])
         p_vals: list of p values to plot (default: [2, 3, 4, 5, 6, 7])
     """
+    # For backward compatibility, we'll still compute separately if called alone
+    # But recommend using plot_energy_and_chern_vs_p for both
     if res_vals is None:
         res_vals = [1, 2, 3, 4]
     if p_vals is None:
@@ -397,6 +564,11 @@ def plot_energy_heatmap(res_val=3, p_val=5, grid_type='train', Jx=JX, Jy=JY, Jz=
     ax.set_aspect('equal')
     ax.set_xlim(-np.pi, np.pi)
     ax.set_ylim(-np.pi, np.pi)
+    # set the ticks to be -pi, 0, pi
+    ax.set_xticks([-np.pi, 0, np.pi])
+    ax.set_yticks([-np.pi, 0, np.pi])
+    ax.set_xticklabels(['$-\\pi$', '$0$', '$\\pi$'])
+    ax.set_yticklabels(['$-\\pi$', '$0$', '$\\pi$'])
     
     # Save figure
     fig_path = os.path.join(FIGURES_DIR, f'energy_heatmap_{grid_name}_24x24.pdf')
@@ -413,6 +585,79 @@ def plot_energy_heatmap_train(res_val=3, p_val=5, Jx=JX, Jy=JY, Jz=JZ, kappa=KAP
 def plot_energy_heatmap_test(res_val=3, p_val=5, Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
     """Wrapper for backward compatibility"""
     plot_energy_heatmap(res_val, p_val, grid_type='test', Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
+
+
+def plot_chern_vs_test_grid_size(res_val=2, p_val=5, test_grid_sizes=None, Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
+    """
+    Generate chern_vs_test_grid_size.pdf - Chern number vs. test grid size
+    
+    Args:
+        res_val: resolution parameter (training grid size = 6 * res_val)
+        p_val: number of layers
+        test_grid_sizes: list of test grid sizes to evaluate (default: [6, 12, 18, 24, 30, 36, 42, 48, 60, 90, 120])
+        Jx, Jy, Jz, kappa: Kitaev parameters
+    """
+    if test_grid_sizes is None:
+        test_grid_sizes = [6, 12, 24, 48, 120, 240]
+    
+    print(f"\n{'='*60}")
+    print("Generating chern_vs_test_grid_size.pdf (24×24 model)")
+    print(f"{'='*60}")
+    print(f"Training grid size: {6 * res_val}")
+    print(f"Test grid sizes: {test_grid_sizes}")
+    
+    # Load parameters
+    strength_durations = load_optimized_parameters_for_res_p(res_val, p_val, input_dir=PARAMS_DIR_24X24)
+    
+    # Calculate Chern numbers for different test grid sizes
+    system_chern_list = []
+    test_grid_sizes_valid = []
+    
+    for n_k_points_test in test_grid_sizes:
+        print(f"  Evaluating test grid size: {n_k_points_test}...")
+        
+        try:
+            # Create test grid
+            kx_list_test = get_k_grid(n_k_points_test)
+            ky_list_test = get_k_grid(n_k_points_test)
+            
+            # Run simulation on test grid (use N_CYCLES_STEADY for convergence)
+            _, _, _, system_chern, _, _ = simulate_grid_with_analysis(
+                kx_list_test, ky_list_test, strength_durations, N_CYCLES_STEADY, Jx, Jy, Jz, kappa
+            )
+            
+            system_chern_list.append(system_chern)
+            test_grid_sizes_valid.append(n_k_points_test)
+            
+            print(f"    System $\\nu$: {system_chern:.6f}")
+            
+        except Exception as e:
+            print(f"    Warning: Could not evaluate grid size {n_k_points_test}: {e}")
+            continue
+    
+    if len(system_chern_list) == 0:
+        print("  Error: No valid data points, skipping plot...")
+        return
+    
+    # Create plot
+    plt.figure(figsize=FIG_SIZE)
+    plt.plot(test_grid_sizes_valid, system_chern_list, 'b-o', linewidth=2, markersize=6)
+    
+    # Add horizontal line at target value
+    plt.axhline(y=1.0, color='gray', linestyle=':', alpha=0.5, linewidth=1, label='Target $\\nu=1$')
+    
+    plt.xlabel('Test grid size $L_{\\text{test}}$', fontsize=FONT_SIZE_LABELS)
+    plt.ylabel('$\\nu$', fontsize=FONT_SIZE_LABELS)
+    plt.grid(True, alpha=0.3)
+    plt.legend(fontsize=FONT_SIZE_LEGEND)
+    plt.tick_params(labelsize=FONT_SIZE_TICKS)
+    plt.tight_layout()
+    
+    # Save figure
+    fig_path = os.path.join(FIGURES_DIR, 'chern_vs_test_grid_size_24x24.pdf')
+    plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+    print(f"  Saved to {fig_path}")
+    plt.close()
 
 
 def plot_parameters_vs_layer(res_val=3, p_val=5):
@@ -440,7 +685,10 @@ def plot_parameters_vs_layer(res_val=3, p_val=5):
     linestyles = ['-', '-', '-', '-', '-', '-']
     
     for i, (term, label, color, ls) in enumerate(zip(terms, labels, colors, linestyles)):
-        plt.plot(range(1, p_val + 1), strength_durations[term], 
+        # Wrap parameters to [-π, π] since they are periodic mod 2π
+        params_wrapped = np.mod(strength_durations[term] + np.pi, 2 * np.pi) - np.pi
+        print(f"params_wrapped for {term}: {params_wrapped}")
+        plt.plot(range(1, p_val + 1), params_wrapped, 
                 label=label, marker='o', linewidth=2, markersize=6, color=color, linestyle=ls)
     
     # set x ticks according to the data
@@ -460,7 +708,7 @@ def plot_parameters_vs_layer(res_val=3, p_val=5):
     plt.close()
 
 
-def main(res_val=3, p_val=5, res_vals=None, p_vals=None, generate_all=True, 
+def main(res_val=2, p_val=5, res_vals=None, p_vals=None, generate_all=True, 
          Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
     """
     Generate all figures for the LaTeX document (24×24 model)
@@ -484,15 +732,16 @@ def main(res_val=3, p_val=5, res_vals=None, p_vals=None, generate_all=True,
     print("="*60)
     
     # Generate single-res figures
+    plot_chern_vs_test_grid_size(res_val, p_val, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
+    plot_parameters_vs_layer(res_val, p_val)
     plot_energy_vs_cycles(res_val, p_val, max_cycles=20, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
     plot_energy_heatmap_train(res_val, p_val, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
     plot_energy_heatmap_test(res_val, p_val, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
-    plot_parameters_vs_layer(res_val, p_val)
     
     # Generate multi-res figures (if requested)
+    # Use combined function to avoid redundant computation
     if generate_all:
-        plot_chern_vs_p(res_vals=res_vals, p_vals=p_vals, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
-        plot_energy_vs_p_by_res(res_vals=res_vals, p_vals=p_vals, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
+        plot_energy_and_chern_vs_p(res_vals=res_vals, p_vals=p_vals, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
     
     print("\n" + "="*60)
     print("ALL FIGURES GENERATED SUCCESSFULLY (24×24 MODEL)")
@@ -505,11 +754,11 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Generate all figures for LaTeX summary (24×24 model)')
-    parser.add_argument('--res', type=int, default=2, help='Resolution parameter for single-res plots (default: 3)')
+    parser.add_argument('--res', type=int, default=2, help='Resolution parameter for single-res plots (default: 2)')
     parser.add_argument('--p', type=int, default=5, help='Number of layers for single-p plots (default: 5)')
-    parser.add_argument('--res-vals', type=int, nargs='+', default=None, 
+    parser.add_argument('--res-vals', type=int, nargs='+', default=[1, 2, 3, 4], 
                        help='List of res values for multi-res plots (default: [1, 2, 3, 4])')
-    parser.add_argument('--p-vals', type=int, nargs='+', default=None,
+    parser.add_argument('--p-vals', type=int, nargs='+', default=[2, 3, 4, 5, 6, 7],
                        help='List of p values for multi-p plots (default: [2, 3, 4, 5, 6, 7])')
     parser.add_argument('--single-only', action='store_true',
                        help='Only generate single-res plots (skip energy_vs_p_by_res and chern_vs_p)')

@@ -18,7 +18,6 @@ if project_root not in sys.path:
 from ksl_24x24_model import (
     create_KSL_24x24_hamiltonian, 
     KSL24SingleParticleDensityMatrix,
-    convert_k_to_K,
     get_all_kappa_term_names
 )
 from hamiltonian_base import VariationalCircuit
@@ -98,7 +97,7 @@ def create_trotterized_circuit_24x24(kx: float, ky: float, num_steps: int = 100,
     Create a trotterized circuit with time-dependent g(t) and B(t) for 24×24 model.
     
     Args:
-        kx, ky: Momentum values (will be converted to K_i, K_j)
+        kx, ky: Momentum values
         num_steps: Number of Trotter steps
         T: Total evolution time
         g0: Maximum g value
@@ -109,12 +108,9 @@ def create_trotterized_circuit_24x24(kx: float, ky: float, num_steps: int = 100,
     Returns:
         VariationalCircuit instance
     """
-    # Convert k-space to K-space
-    K_i, K_j = convert_k_to_K(kx, ky)
-    
     # Create Hamiltonian (g and B will be time-dependent in the circuit)
     # g and B are constants for now to ensure the terms are added to the Hamiltonian
-    hamiltonian = create_KSL_24x24_hamiltonian(K_i, K_j, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=1., B=1.)
+    hamiltonian = create_KSL_24x24_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=1., B=1.)
     
     # Get parameters from helper function
     parameters = create_trotterized_parameters_24x24(num_steps, T, g0, B0, B1)
@@ -140,15 +136,13 @@ def test_trotterized_cooling_24x24(kx: float = 0.5, ky: float = 0.7, num_steps: 
     print("Testing Trotterized Cooling Protocol (24×24 Model)")
     print("="*80)
     print(f"Momentum: kx={kx:.4f}, ky={ky:.4f}")
-    K_i, K_j = convert_k_to_K(kx, ky)
-    print(f"Bloch wavevector: K_i={K_i:.4f}, K_j={K_j:.4f}")
     print(f"Number of Trotter steps per cycle: {num_steps}")
     print(f"Number of cooling cycles: {num_cycles}")
     print()
     
     # Create system Hamiltonian for energy computation and ground state
     # (without g and B terms, as energy is measured with respect to system only)
-    system_hamiltonian = create_KSL_24x24_hamiltonian(K_i, K_j, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=0.0)
+    system_hamiltonian = create_KSL_24x24_hamiltonian(kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=0.0)
 
     # Get ground state
     ground_state_matrix = system_hamiltonian.get_ground_state()

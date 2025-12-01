@@ -54,7 +54,7 @@ urlcolor=nightblue]{hyperref}
 
 \begin{document}
 
-\title{Variational Cooling of Chiral Spin Liquids: \\ Shallow-Depth Circuit Optimization for the Kitaev Honeycomb Model}
+\title{Variational Cooling of a Chiral Spin Liquid: \\ Shallow-Depth Circuit Optimization for the Kitaev Honeycomb Model}
 
 \author{Gilad Kishony}\email{gilad.kishony@weizmann.ac.il}
 \affiliation{Department of Condensed Matter Physics,
@@ -66,7 +66,8 @@ Weizmann Institute of Science,
 Rehovot 76100, Israel}
 
 \begin{abstract}
-We present an efficient approach for preparing the ground state of the chiral phase of the Kitaev spin liquid (KSL) model using shallow-depth quantum circuits. By combining the fermionic cooling approach of Ref.~\cite{Kishony_2025} with the variational optimization strategy of Ref.~\cite{song2025varicoolnonunitaryquantumvariational}, we develop a protocol that replaces the large-depth Trotterized evolution (requiring on the order of 100 steps) with an optimized circuit containing only a few layers. The protocol is trained on small momentum-space grids and demonstrates good transferability to larger system sizes. We systematically explore the performance as a function of circuit depth and training system size, showing that even with $p=5$ layers, the protocol achieves a state with a residual energy density of $0.012$ in the units of the gap.
+We present an efficient approach for preparing the ground state of the chiral phase of the Kitaev spin liquid (KSL) model using a shallow-depth quantum circuit. 
+By combining the fermionic cooling approach of Ref.~\cite{Kishony_2025} with the variational optimization strategy of Ref.~\cite{song2025varicoolnonunitaryquantumvariational}, we develop a protocol that replaces the large-depth Trotterized evolution (requiring on the order of 100 steps) with an optimized circuit containing only a few layers. The protocol is trained on small momentum-space grids and demonstrates good transferability to larger system sizes. We systematically explore the performance as a function of circuit depth and training system size, showing that even with $p=5$ layers, the protocol achieves a state with a residual energy density of $0.013$ in the units of the gap.
 \end{abstract}
 
 \maketitle
@@ -88,7 +89,7 @@ H_{\text{KSL}}=&-\sum_{\alpha\in\{x,y,z\}}\mathcal{J}_{\alpha}\sum_{\langle\math
 &-\kappa\sum_{\langle\langle\mathbf{J},\mathbf{K},\mathbf{L}\rangle\rangle}\sigma_{\mathbf{J}}^{x}\sigma_{\mathbf{K}}^{y}\sigma_{\mathbf{L}}^{z},
 \label{eq: KSL}
 \end{align}
-where $\mathbf{J} = (i,j,s)$ denotes sites of the honeycomb lattice with unit cell indices $i,j$ and sublattice $s\in\{A,B\}$, $\sigma_{\mathbf{J}}^\alpha$ are Pauli matrices, and $\kappa$ is a three-spin interaction that breaks time-reversal symmetry and drives the system into the gapped chiral non-Abelian phase. The bonds of the honeycomb lattice are partitioned into three sets -- $x$, $y$, and $z$ bonds -- according to their geometric orientations (see Fig.~\ref{fig:ksl_model}), and the Kitaev exchange couplings $\mathcal{J}_x, \mathcal{J}_y, \mathcal{J}_z$ act on the corresponding bond types.
+where $\mathbf{J} = (i,j,s)$ denotes sites of the honeycomb lattice with unit cell indices $i,j$ and sublattice $s\in\{A,B\}$, $\sigma_{\mathbf{J}}^\alpha$ are Pauli matrices, and $\kappa$ is a three-site interaction that breaks time-reversal symmetry and drives the system into the gapped chiral non-Abelian phase. The bonds of the honeycomb lattice are partitioned into three sets -- $x$, $y$, and $z$ bonds -- according to their geometric orientations (see Fig.~\ref{fig:ksl_model}), and the Kitaev exchange couplings $\mathcal{J}_x, \mathcal{J}_y, \mathcal{J}_z$ act on the corresponding bond types.
 
 \subsection{Modified Model for Cooling}
 
@@ -119,7 +120,7 @@ The system is illustrated in Fig.~\ref{fig:ksl_model}, showing the honeycomb lat
 \begin{centering}
 \includegraphics[width=(\textwidth-\columnsep)/2]{figures/generalized_ksl.pdf}
 \par\end{centering}
-\caption{\textbf{The generalized KSL model with bath spins.} Each unit cell consists of two system spins (black) and two bath spins (white). The bonds are colored according to orientation: $x$-blue, $y$-green, $z$-red. The five-spin term $\kappa$ drives the system into the chiral phase. The figure shows the structure of the model used for cooling, where auxiliary bath spins enable the fermionic cooling protocol.}
+\caption{\textbf{The generalized KSL model with bath spins.} Each site consists of a system spin (black) and a bath spin (white). The bonds are colored according to orientation: $x$-blue, $y$-green, $z$-red. The five-spin term $\kappa$ drives the system into the chiral phase. The figure shows the structure of the model used for cooling, where auxiliary bath spins enable the fermionic cooling protocol.}
 \label{fig:ksl_model}
 \end{figure}
 
@@ -139,13 +140,13 @@ The spin operators are related to the fermionic ones by:
 \end{equation}
 where $\alpha,\beta,\gamma \in \{x,y,z\}$ and $\varepsilon^{\alpha\beta\gamma}$ is the totally antisymmetric tensor.
 
-After fermionization, the Hamiltonian can be expressed in terms of the system fermions $\{c_{\mathbf{J}}^{z}\}$ and the conserved $\mathbb{Z}_2$ gauge fields $\{u_{\mathbf{I},\mathbf{J}}\}$, where $u_{\mathbf{I},\mathbf{J}} = ib_{\mathbf{I}}^{\alpha}b_{\mathbf{J}}^{\alpha}$ for bonds $\langle \mathbf{I},\mathbf{J}\rangle\in \alpha\text{-bonds}$ with $\alpha\in\{x,y,z\}$. The gauge-invariant flux $W_{i,j}$ of the $\mathbb{Z}_2$ gauge field is defined on each hexagonal plaquette corresponding to unit cell $(i,j)$ as the product of $u_{\mathbf{I},\mathbf{J}}$ on its edges. In the flux-free sector with $W_{i,j}=1$ for all plaquettes (equivalent to setting $u_{\mathbf{I},\mathbf{J}}=1$ up to a $\mathbb{Z}_2$ gauge transformation) and with uniform $\tau^z_{\mathbf{J}}=1$, the Hamiltonian becomes translationally invariant and can be Fourier transformed to momentum space.
+After fermionization, the Hamiltonian can be expressed in terms of fermions $\{c_{\mathbf{J}}^{x}, c_{\mathbf{J}}^{y}, c_{\mathbf{J}}^{z}\}$ and the conserved $\mathbb{Z}_2$ gauge field $\{u_{\mathbf{I},\mathbf{J}}\}$, where $u_{\mathbf{I},\mathbf{J}} = ib_{\mathbf{I}}^{\alpha}b_{\mathbf{J}}^{\alpha}$ for bonds $\langle \mathbf{I},\mathbf{J}\rangle\in \alpha\text{-bonds}$ with $\alpha\in\{x,y,z\}$. The gauge-invariant flux $W_{i,j}$ of the $\mathbb{Z}_2$ gauge field is defined on each hexagonal plaquette corresponding to unit cell $(i,j)$ as the product of $u_{\mathbf{I},\mathbf{J}}$ on its edges. In the flux-free sector with $W_{i,j}=1$ for all plaquettes (equivalent to setting $u_{\mathbf{I},\mathbf{J}}=1$ up to a $\mathbb{Z}_2$ gauge transformation) and with uniform $\tau^z_{\mathbf{J}}=1$, the Hamiltonian becomes translationally invariant and can be Fourier transformed to momentum space.
 
 The fermionic Hamiltonian in momentum space is:
 \begin{align}
 H(t)=\sum_{\bm{k}}\bm{\Psi}_{\bm{k}}^\dagger H_{\bm{k}}(t)\bm{\Psi}_{\bm{k}},
 \end{align}
-where in the original unit cell description, $\bm{\Psi}_{\bm{k}}^\dagger=\begin{pmatrix}c_{(\bm{k},A)}^{z\dagger}&
+where $\bm{\Psi}_{\bm{k}}^\dagger=\begin{pmatrix}c_{(\bm{k},A)}^{z\dagger}&
 c_{(\bm{k},B)}^{z\dagger}&
 c_{(\bm{k},A)}^{y\dagger}&
 c_{(\bm{k},B)}^{y\dagger}&
@@ -162,7 +163,7 @@ ig(t)\mathbb{I} & 0 & -iB(t)\mathbb{I}\\
 \label{eq:Hk}
 \end{align}
 
-In the enlarged $2\times2$ supercell description used for the variational circuit, the system Hamiltonian for the $c^z$ fermions becomes an $8 \times 8$ matrix $H(\mathbf{K})$ (see Sec.~\ref{sec:enlarged_unit_cell}), where $\mathbf{K}$ is the Bloch wavevector for the supercell. Here, $h_{\bm{k}}$ is the $2 \times 2$ system Hamiltonian in the original unit cell description:
+Here, $h_{\bm{k}}$ is the $2 \times 2$ system Hamiltonian:
 \begin{align}
 h_{\bm{k}}&=\begin{pmatrix} \Delta(\bm{k}) & if(\bm{k})\\
 -if(-\bm{k}) & -\Delta(\bm{k})
@@ -180,12 +181,12 @@ The key advantage of this momentum-space description is that different $\bm{k}$ 
 \subsection{Enlarged Unit Cell and Decomposition of $\kappa$}
 \label{sec:enlarged_unit_cell}
 
-The $\kappa$ as written in Eq.~\eqref{eq:H_KSL} is a sum of terms which do not act on disjoint sets of qubits.
-To enable the application of the $\kappa$ term gate-wise in the variational circuit, we partition $\kappa$ into vertex-disjoint subsets by working with an enlarged $2\times2$ supercell structure.
+The $\kappa$ term as written in Eq.~\eqref{eq:H_KSL} is a sum of terms which do not act on disjoint sets of qubits.
+To enable the application of the $\kappa$ term gate-wise in the variational circuit, we partition it into vertex-disjoint subsets by working with an enlarged $2\times2$ supercell structure.
 The original unit cell with two sites (one per sublattice) is enlarged to a supercell containing four internal offsets $r_0=(0,0)$, $r_1=(1,0)$, $r_2=(0,1)$, and $r_3=(1,1)$ within each sublattice.
-This results in a total of $2 \times 3 \times 4 = 24$ Majorana fermion modes per supercell [2 sublattices $\times$ 3 labels ($x,y,z$) $\times$ 4 offsets], compared to the original $2 \times 3 = 6$ modes per unit cell.
+This results in a total of $2 \times 3 \times 4 = 24$ Majorana fermion modes per supercell [2 sublattices $\times$ 3 labels ($x,y,z$) $\times$ 4 offsets].
 
-The three-spin $\kappa$ term can be decomposed into $12$ vertex-disjoint subsets, indexed by sublattice class $S\in\{A,B\}$ (A--A or B--B), next-nearest-neighbor direction $d\in\{+i,\,-j,\,j-i\}$, and parity $p\in\{\mathrm{even},\mathrm{odd}\}$. The decomposition is illustrated in Fig.~\ref{fig:kappa_partition}, where different colors represent different subsets that can be applied simultaneously gate-wise.
+The three-site $\kappa$ term can be decomposed into $12$ vertex-disjoint subsets, indexed by sublattice class $S\in\{A,B\}$ (A--A or B--B), next-nearest-neighbor direction $d\in\{+i,\,-j,\,j-i\}$, and parity $p\in\{\mathrm{even},\mathrm{odd}\}$. The decomposition is illustrated in Fig.~\ref{fig:kappa_partition}, where different colors represent different subsets that can be applied simultaneously gate-wise.
 
 In the Bloch basis for the supercell, we define $\mathbf{K}\cdot\mathbf{a} = 2K_i$ and $\mathbf{K}\cdot\mathbf{b} = 2K_j$, where $\mathbf{a} = 2\hat{i}$ and $\mathbf{b} = 2\hat{j}$ are the supercell lattice vectors. The system Hamiltonian for the $c^z$ fermions becomes an $8 \times 8$ matrix in this basis, with the structure:
 \begin{align}
@@ -201,13 +202,13 @@ where $H_{AA}$ and $H_{BB}$ contain the $\kappa$ terms (with opposite signs for 
 \begin{centering}
 \includegraphics[width=(\textwidth-\columnsep)/2]{figures/kappa_partition.pdf}
 \par\end{centering}
-\caption{\textbf{Decomposition of the $\kappa$ term into vertex-disjoint subsets.} The three-spin $\kappa$ interactions are partitioned into $12$ commuting blocks. Different colors represent different subsets that can be applied simultaneously as they act on disjoint sets of qubits. Each subset is indexed by sublattice class (A--A or B--B), direction ($+i$, $-j$, or $j-i$), and parity (even or odd).}
+\caption{\textbf{Decomposition of the $\kappa$ term into vertex-disjoint subsets.} The three-site $\kappa$ interactions are partitioned into $12$ commuting blocks. Different colors represent different subsets that can be applied simultaneously as they act on disjoint sets of qubits. Each subset is indexed by sublattice class (A--A or B--B), direction ($+i$, $-j$, or $j-i$), and parity (even or odd).}
 \label{fig:kappa_partition}
 \end{figure}
 
 \subsection{Cooling Protocol}
 
-The protocol to prepare the ground state of $\widetilde{H}_{\text{KSL}}$ consists of repeated cooling cycles. Each cycle begins with the $\tau$ spins in a known product state in the computational basis (i.e., an eigenstate of all $\tau^z_{\mathbf{J}}$ operators). Before the first cycle, the system is initialized such that $\tau^z_{\mathbf{J}} = +1$ for all sites $\mathbf{J}$. The $\sigma$ spins are brought to a flux-free state, $W_{i,j} = 1$ for all plaquettes. This can be done by measuring all the flux operators (which are mutually commuting) and annihilating the detected fluxes in pairs by applying appropriate unitary operators.
+The protocol to prepare the ground state of $\widetilde{H}_{\text{KSL}}$ consists of repeated cooling cycles. Each cycle begins with the $\tau$ spins in a known product state in the computational basis (i.e., an eigenstate of all $\tau^z_{\mathbf{J}}$ operators). Before the first cycle, the system is initialized such that $\tau^z_{\mathbf{J}} = +1$ for all sites $\mathbf{J}$. The $\sigma$ spins are brought to a flux-free state, $W_{i,j} = 1$ for all plaquettes. This can be done by measuring all the flux operators (which are mutually commuting) and annihilating the detected fluxes in pairs by applying appropriate local unitary operators.
 
 Each cooling cycle consists of the following stages:
 
@@ -242,12 +243,12 @@ Each term corresponds to exponentiation of the corresponding Hamiltonian compone
 \item $U_{J_x}(\alpha_{x,\ell}) = \exp\left(-i (\alpha_{x,\ell}/2) \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in x\text{-bonds}}\sigma_{\mathbf{I}}^{x}\sigma_{\mathbf{J}}^{x}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_x$ bond interactions
 \item $U_{J_y}(\alpha_{y,\ell}) = \exp\left(-i (\alpha_{y,\ell}/2) \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in y\text{-bonds}}\sigma_{\mathbf{I}}^{y}\sigma_{\mathbf{J}}^{y}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_y$ bond interactions  
 \item $U_{J_z}(\alpha_{z,\ell}) = \exp\left(-i (\alpha_{z,\ell}/2) \sum_{\langle \mathbf{I},\mathbf{J}\rangle\in z\text{-bonds}}\sigma_{\mathbf{I}}^{z}\sigma_{\mathbf{J}}^{z}\tau_{\mathbf{I}}^{z}\tau_{\mathbf{J}}^{z}\right)$ for the $J_z$ bond interactions
-\item $U_{\kappa}(\delta_\ell) = \prod_{S,d,p} \exp\left(-i (\delta_\ell/2) H_{\kappa}^{S,d,p}\right)$ for the three-spin $\kappa$ term, where the product is over the $12$ vertex-disjoint subsets $H_{\kappa}^{S,d,p}$ (see Fig.~\ref{fig:kappa_partition}). Each subset $H_{\kappa}^{S,d,p}$ acts on disjoint sets of qubits, allowing exact exponentiation without intra-block Trotter error.
+\item $U_{\kappa}(\delta_\ell) = \prod_{S,d,p} \exp\left(-i (\delta_\ell/2) H_{\kappa}^{S,d,p}\right)$ for the three-site $\kappa$ term, where the product is over the $12$ vertex-disjoint subsets $H_{\kappa}^{S,d,p}$ (see Fig.~\ref{fig:kappa_partition}). Each subset $H_{\kappa}^{S,d,p}$ acts on disjoint sets of qubits.
 \item $U_g(\gamma_\ell) = \exp\left(-i (\gamma_\ell/2) \sum_{\mathbf{J}}\tau_{\mathbf{J}}^{x}\right)$ for the system-bath coupling
 \item $U_B(\beta_\ell) = \exp\left(-i (\beta_\ell/2) \sum_{\mathbf{J}}s_{\mathbf{J}}\tau_{\mathbf{J}}^{z}\right)$ for the bath Zeeman field, where $s_{\mathbf{J}} = \pm 1$ is the measurement outcome of $\tau^z_{\mathbf{J}}$ from the previous cycle
 \end{itemize}
 
-The variational parameters $\{\alpha_{x,\ell}, \alpha_{y,\ell}, \alpha_{z,\ell}, \beta_\ell, \gamma_\ell, \delta_\ell\}_{\ell=1}^p$ are all periodic modulo $2\pi$, and are optimized to minimize the energy density in the steady state achieved after multiple cooling cycles. The decomposition of the $\kappa$ term into vertex-disjoint subsets ensures that each subset can be exponentiated exactly, eliminating Trotter errors within each block and improving the accuracy of the variational circuit.
+The variational parameters $\{\alpha_{x,\ell}, \alpha_{y,\ell}, \alpha_{z,\ell}, \beta_\ell, \gamma_\ell, \delta_\ell\}_{\ell=1}^p$ are all periodic modulo $2\pi$, and are optimized to minimize the energy density in the steady state achieved after multiple cooling cycles.
 
 \section{Training Regimen}
 
@@ -265,7 +266,7 @@ Keeping the numbers of required layers and cycles small is particularly importan
 
 \subsection{Loss Function}
 
-For computational efficiency, we train the protocol on a small system of size $L_{\text{train}} \times L_{\text{train}}$ unit cells. Later, we evaluate the performance of the trained circuit a larger system of size $L_{\text{test}} \times L_{\text{test}}$ unit cells.
+For computational efficiency, we train the protocol on a small system of size $L_{\text{train}} \times L_{\text{train}}$ enlarged unit cells. Later, we evaluate the performance of the trained circuit a larger system of size $L_{\text{test}} \times L_{\text{test}}$ enlarged unit cells.
 
 The loss function for training is computed as follows. For each momentum point $\bm{k}$ in the training system Brillouin zone, we simulate $T_{\text{train}}$ cycles of cooling starting from a maximally mixed initial state. The energy $E(\bm{k})$ after $T_{\text{train}}$ cycles is computed at each $\bm{k}$ point, and the loss function is defined as the root-mean-square (RMS) energy difference from the ground state:
 \begin{align}
@@ -288,8 +289,8 @@ This approach, allows us to systematically explore increasing circuit depths whi
 
 \section{Results}
 
-Throughout this section, we present results for the chiral phase of the Kitaev spin liquid model with exchange couplings $\mathcal{J}_x = \mathcal{J}_y = \mathcal{J}_z = 1$ and three-spin interaction strength $\kappa = 1$.
-Before cooling, the system is initialized in a product state with $\left\langle c_{(\bm{k},s)}^{z\dagger} c_{(\bm{k},s)}^{z}\right\rangle = 1$. We use $T_{\text{train}} = 5$ cooling cycles to train the circuit.
+Throughout this section, we present results for the chiral phase of the Kitaev spin liquid model with exchange couplings $\mathcal{J}_x = \mathcal{J}_y = \mathcal{J}_z = 1$ and three-site interaction strength $\kappa = 1$.
+Before cooling, the system is initialized in a maximally mixes state. We use $T_{\text{train}} = 5$ cooling cycles to train the circuit.
 We use the state reached after $T_{\text{steady}} = 40$ cooling cycles as a proxy for the steady state.
 Various system sizes $L_{\text{train}}$ are used for training. The performance is evaluated on a test system of size $L_{\text{test}} = 120$.
 
@@ -297,7 +298,7 @@ Various system sizes $L_{\text{train}}$ are used for training. The performance i
 
 \begin{figure}
 \begin{centering}
-\includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_vs_p_by_res.pdf}
+\includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_vs_p_by_res_24x24.pdf}
 \par\end{centering}
 \caption{\textbf{Energy density vs. circuit depth $p$ for different training system sizes.} Solid lines show test grid performance, dashed lines show training grid performance. Results are shown for various training system sizes. The protocol achieves near-optimal performance even with $p=5$ layers.}
 \label{fig:energy_vs_p}
@@ -317,7 +318,7 @@ Fig.~\ref{fig:chern_vs_p} shows the finite size spectral Chern number $\nu$ of t
 
 \begin{figure}
 \begin{centering}
-\includegraphics[width=(\textwidth-\columnsep)/2]{figures/chern_vs_p.pdf}
+\includegraphics[width=(\textwidth-\columnsep)/2]{figures/chern_vs_p_24x24.pdf}
 \par\end{centering}
 \caption{\textbf{Finite size spectral Chern number $\nu$ vs. circuit depth $p$ for different training system sizes.} Solid lines show test system performance, dashed lines show training system performance. The target value is $\nu=1$ for the system fermions. Results are shown for various training system sizes. The protocol successfully prepares states with the correct topological invariant even with shallow circuits.}
 \label{fig:chern_vs_p}
@@ -327,7 +328,7 @@ Fig.~\ref{fig:chern_vs_p} shows the finite size spectral Chern number $\nu$ of t
 
 \begin{figure}
 \begin{centering}
-\includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_vs_cycles.pdf}
+\includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_vs_cycles_24x24.pdf}
 \par\end{centering}
 \caption{\textbf{Energy density vs. number of cooling cycles for trained circuit with $L_{\text{train}} = 18$, $p=5$.} Results are shown for both training system size (blue) and test system size (red). The protocol converges to a steady state within a few cycles.}
 \label{fig:energy_vs_cycles}
@@ -340,9 +341,9 @@ In the adiabatic limit, the protocol of Ref.~\cite{Kishony_2025} is able to reac
 
 \begin{figure}
 \begin{centering}
-\includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_heatmap_train.pdf}\\
+\includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_heatmap_train_24x24.pdf}\\
 \vspace{0.2cm}
-\includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_heatmap_test.pdf}
+\includegraphics[width=(\textwidth-\columnsep)/2]{figures/energy_heatmap_test_24x24.pdf}
 \par\end{centering}
 \caption{\textbf{Energy difference heatmaps for optimized circuit with $L_{\text{train}} = 18$, $p=5$.} (Top) Training grid. (Bottom) Test grid, with red crosses indicating the training grid points for comparison. The color scale shows the energy difference from the ground state at each momentum point. The protocol successfully cools the system across the entire Brillouin zone, with only small residual excitations remaining.}
 \label{fig:energy_heatmap}
@@ -354,7 +355,7 @@ Fig.~\ref{fig:energy_heatmap} shows the distribution of energy differences in mo
 
 \begin{figure}
 \begin{centering}
-\includegraphics[width=(\textwidth-\columnsep)/2]{figures/parameters_vs_layer.pdf}
+\includegraphics[width=(\textwidth-\columnsep)/2]{figures/parameters_vs_layer_24x24.pdf}
 \par\end{centering}
 \caption{\textbf{Optimized variational parameters vs. layer number $\ell$ for circuit with $L_{\text{train}} = 18$, $p=5$.}
 Different colors represent different parameter types: $\alpha_{x,\ell}$ ($J_x$), $\alpha_{y,\ell}$ ($J_y$), $\alpha_{z,\ell}$ ($J_z$), $\beta_\ell$ ($B$), $\gamma_\ell$ ($g$), and $\delta_\ell$ ($\kappa$), where $\ell = 1, \ldots, p$ indexes the layers.}
