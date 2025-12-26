@@ -37,7 +37,7 @@ from ksl_24x24_model import (
 )
 from hamiltonian_base import VariationalCircuit
 from time_dependence_functions import get_g, get_B
-from interger_chern_number import chern_from_mixed_spdm, get_chern_number_from_single_particle_dm, chern_from_spdm_with_threshold_eigenvalues
+from interger_chern_number import chern_from_mixed_spdm, get_chern_number_from_single_particle_dm, chern_from_spdm_with_threshold_eigenvalues, chern_fhs_from_spdm
 
 # Import reusable functions from 6×6 training file
 from progressive_circuit_expansion_training import (
@@ -255,11 +255,11 @@ def simulate_grid_with_analysis(kx_list, ky_list, parameters, n_cycles, Jx, Jy, 
     E_diff, single_particle_dm = simulate_grid(kx_list, ky_list, parameters, n_cycles, 
                                                 Jx, Jy, Jz, kappa, verbose=False)
     
-    # Calculate Chern numbers
+    # Calculate Chern numbers using FHS method
     # For 24×24 model, system modes are 0-7 (c^z), bath modes are 8-23 (c^y and c^x)
-    total_chern_number = chern_from_spdm_with_threshold_eigenvalues(single_particle_dm)
-    system_chern_number = chern_from_spdm_with_threshold_eigenvalues(single_particle_dm[:, :, :8, :8])  # First 8 modes (c^z)
-    bath_chern_number = chern_from_spdm_with_threshold_eigenvalues(single_particle_dm[:, :, 8:, 8:])  # Remaining 16 modes (c^y, c^x)
+    total_chern_number = chern_fhs_from_spdm(single_particle_dm)
+    system_chern_number = chern_fhs_from_spdm(single_particle_dm[:, :, :8, :8])  # First 8 modes (c^z)
+    bath_chern_number = chern_fhs_from_spdm(single_particle_dm[:, :, 8:, 8:])  # Remaining 16 modes (c^y, c^x)
     
     # Calculate average energy density (use final cycle if multiple cycles)
     if n_cycles == 1:

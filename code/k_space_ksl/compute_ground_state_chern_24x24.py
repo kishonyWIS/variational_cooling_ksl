@@ -19,7 +19,7 @@ if code_dir not in sys.path:
 
 from ksl_24x24_model import create_KSL_24x24_hamiltonian
 from progressive_circuit_expansion_training_24x24 import get_k_grid
-from interger_chern_number import chern_from_mixed_spdm, get_chern_number_from_single_particle_dm, chern_from_spdm_with_threshold_eigenvalues
+from interger_chern_number import chern_from_mixed_spdm, get_chern_number_from_single_particle_dm, chern_from_spdm_with_threshold_eigenvalues, chern_fhs_from_spdm
 
 
 def compute_ground_state_chern(kx_list, ky_list, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1.0, 
@@ -87,7 +87,17 @@ def compute_ground_state_chern(kx_list, ky_list, Jx=1.0, Jy=1.0, Jz=1.0, kappa=1
         print(f"Chern number (system modes 0-7) from single-particle density matrix: {system_chern_from_single_particle_dm:.6f}")
         print(f"Chern number (all modes 0-23) from single-particle density matrix: {total_chern_from_single_particle_dm:.6f}")
     
-    return system_chern, total_chern, single_particle_dm, system_chern_from_single_particle_dm, total_chern_from_single_particle_dm
+    # Compute Chern number using FHS method
+    system_chern_fhs, system_diag = chern_fhs_from_spdm(single_particle_dm[:, :, :8, :8], return_diagnostics=True)
+    total_chern_fhs, total_diag = chern_fhs_from_spdm(single_particle_dm, return_diagnostics=True)
+
+    if verbose:
+        print(f"Chern number (system modes 0-7) FHS method: {system_chern_fhs:.6f} (n_occ={system_diag['n_occ']}, min_gap={system_diag['min_gap']:.4f})")
+        print(f"Chern number (all modes 0-23) FHS method: {total_chern_fhs:.6f} (n_occ={total_diag['n_occ']}, min_gap={total_diag['min_gap']:.4f})")
+    
+    return (system_chern, total_chern, single_particle_dm, 
+            system_chern_from_single_particle_dm, total_chern_from_single_particle_dm,
+            system_chern_fhs, total_chern_fhs, system_diag, total_diag)
 
 
 def main():
@@ -124,7 +134,9 @@ def main():
     print("="*60)
     
     # Compute Chern numbers
-    system_chern, total_chern, single_particle_dm, system_chern_from_single_particle_dm, total_chern_from_single_particle_dm = compute_ground_state_chern(
+    (system_chern, total_chern, single_particle_dm, 
+     system_chern_from_single_particle_dm, total_chern_from_single_particle_dm,
+     system_chern_fhs, total_chern_fhs, system_diag, total_diag) = compute_ground_state_chern(
         kx_list, ky_list, Jx=args.Jx, Jy=args.Jy, Jz=args.Jz, kappa=args.kappa,
         verbose=args.verbose
     )
@@ -133,10 +145,12 @@ def main():
     print("\n" + "="*60)
     print("RESULTS")
     print("="*60)
-    print(f"System Chern number (modes 0-7, c^z): {system_chern:.8f} (from mixed SPDM)")
-    print(f"Total Chern number (modes 0-23): {total_chern:.8f} (from mixed SPDM)")
-    print(f"System Chern number (modes 0-7, c^z): {system_chern_from_single_particle_dm:.8f} (from single-particle SPDM)")
-    print(f"Total Chern number (modes 0-23): {total_chern_from_single_particle_dm:.8f} (from single-particle SPDM)")
+    print(f"System Chern number (modes 0-7, c^z): {system_chern:.8f} (threshold eigenvalues)")
+    print(f"Total Chern number (modes 0-23): {total_chern:.8f} (threshold eigenvalues)")
+    print(f"System Chern number (modes 0-7, c^z): {system_chern_from_single_particle_dm:.8f} (derivative method)")
+    print(f"Total Chern number (modes 0-23): {total_chern_from_single_particle_dm:.8f} (derivative method)")
+    print(f"System Chern number (modes 0-7, c^z): {system_chern_fhs:.8f} (FHS method, n_occ={system_diag['n_occ']}, min_gap={system_diag['min_gap']:.4f})")
+    print(f"Total Chern number (modes 0-23): {total_chern_fhs:.8f} (FHS method, n_occ={total_diag['n_occ']}, min_gap={total_diag['min_gap']:.4f})")
     print("="*60)
 
 

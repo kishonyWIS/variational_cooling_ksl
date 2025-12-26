@@ -25,6 +25,8 @@ from progressive_circuit_expansion_training_24x24 import (
     get_k_grid,
     DATA_DIR,
 )
+from interger_chern_number import chern_fhs_from_spdm
+from ksl_24x24_model import create_KSL_24x24_hamiltonian
 
 # Figure output directory
 FIGURES_DIR = os.path.join(os.path.dirname(__file__), '../../figures')
@@ -587,6 +589,108 @@ def plot_energy_heatmap_test(res_val=3, p_val=5, Jx=JX, Jy=JY, Jz=JZ, kappa=KAPP
     plot_energy_heatmap(res_val, p_val, grid_type='test', Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
 
 
+def plot_gap_heatmap(res_val=3, p_val=5, grid_type='train', Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
+    """
+    Generate spectral gap heatmap - Smallest positive eigenvalue of the Hamiltonian at each k-point.
+    
+    The spectral gap is the smallest positive eigenvalue of the system Hamiltonian (8x8 block
+    for c^z fermions) at each k-point. This determines the energy scale for excitations.
+    
+    Args:
+        res_val: resolution parameter (only used for naming, not for computation)
+        p_val: number of layers (only used for naming, not for computation)
+        grid_type: 'train' or 'test' - determines which grid to use
+        Jx, Jy, Jz, kappa: Kitaev parameters
+    """
+    grid_name = 'train' if grid_type == 'train' else 'test'
+    print(f"\n{'='*60}")
+    print(f"Generating gap_heatmap_{grid_name}.pdf (24×24 model)")
+    print(f"{'='*60}")
+    
+    # Determine grid size based on grid type
+    if grid_type == 'train':
+        n_k_points = 6 * res_val
+    else:  # test
+        n_k_points = 6 * 20  # 120
+    
+    # Create grid
+    kx_list = get_k_grid(n_k_points)
+    ky_list = get_k_grid(n_k_points)
+    
+    # Compute spectral gap at each k-point
+    print(f"  Computing spectral gap on {grid_name} grid ({n_k_points}x{n_k_points})...")
+    gap_at_k = np.zeros((len(kx_list), len(ky_list)), dtype=float)
+    
+    for i_kx, kx in enumerate(kx_list):
+        for i_ky, ky in enumerate(ky_list):
+            # Create system Hamiltonian (g=0, B=0 for ground state)
+            hamiltonian = create_KSL_24x24_hamiltonian(
+                kx, ky, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa, g=0.0, B=0.0
+            )
+            
+            # Get the 8x8 system block (c^z fermions, modes 0-7)
+            H_full = hamiltonian.get_matrix()
+            H_system = H_full[:8, :8]
+            
+            # Compute eigenvalues
+            eigenvalues = np.linalg.eigvalsh(H_system)
+            
+            # Find smallest positive eigenvalue (spectral gap)
+            positive_eigenvalues = eigenvalues[eigenvalues > 1e-10]
+            if len(positive_eigenvalues) > 0:
+                gap_at_k[i_kx, i_ky] = np.min(positive_eigenvalues)
+            else:
+                gap_at_k[i_kx, i_ky] = 0.0
+    
+    print(f"  Min spectral gap: {gap_at_k.min():.4f}, Max spectral gap: {gap_at_k.max():.4f}")
+    
+    # Create plot with adjusted layout
+    fig, ax = plt.subplots(figsize=FIG_SIZE)
+    
+    # Adjust subplot to give more space to the main plot
+    plt.subplots_adjust(left=0.15, right=0.85, bottom=0.15, top=0.95)
+    
+    kx_coords = get_k_grid(n_k_points)
+    ky_coords = get_k_grid(n_k_points)
+    
+    vmin = 0.0
+    vmax = np.max(gap_at_k)
+    im = ax.pcolormesh(kx_coords, ky_coords, gap_at_k.T, vmin=vmin, vmax=vmax, shading='auto', cmap='viridis')
+    
+    # Create colorbar with reduced padding to bring it closer
+    cbar = plt.colorbar(im, ax=ax, pad=0.02, shrink=0.9)
+    cbar.set_label('Spectral gap', fontsize=FONT_SIZE_LABELS)
+    cbar.ax.tick_params(labelsize=FONT_SIZE_TICKS)
+    
+    ax.set_xlabel('$k_x$', fontsize=FONT_SIZE_LABELS)
+    ax.set_ylabel('$k_y$', fontsize=FONT_SIZE_LABELS)
+    ax.tick_params(labelsize=FONT_SIZE_TICKS)
+    ax.set_aspect('equal')
+    ax.set_xlim(-np.pi, np.pi)
+    ax.set_ylim(-np.pi, np.pi)
+    # set the ticks to be -pi, 0, pi
+    ax.set_xticks([-np.pi, 0, np.pi])
+    ax.set_yticks([-np.pi, 0, np.pi])
+    ax.set_xticklabels(['$-\\pi$', '$0$', '$\\pi$'])
+    ax.set_yticklabels(['$-\\pi$', '$0$', '$\\pi$'])
+    
+    # Save figure
+    fig_path = os.path.join(FIGURES_DIR, f'gap_heatmap_{grid_name}_24x24.pdf')
+    plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+    print(f"  Saved to {fig_path}")
+    plt.close()
+
+
+def plot_gap_heatmap_train(res_val=3, p_val=5, Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
+    """Wrapper for train grid gap heatmap"""
+    plot_gap_heatmap(res_val, p_val, grid_type='train', Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
+
+
+def plot_gap_heatmap_test(res_val=3, p_val=5, Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
+    """Wrapper for test grid gap heatmap"""
+    plot_gap_heatmap(res_val, p_val, grid_type='test', Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
+
+
 def plot_chern_vs_test_grid_size(res_val=2, p_val=5, test_grid_sizes=None, Jx=JX, Jy=JY, Jz=JZ, kappa=KAPPA):
     """
     Generate chern_vs_test_grid_size.pdf - Chern number vs. test grid size
@@ -732,11 +836,13 @@ def main(res_val=2, p_val=5, res_vals=None, p_vals=None, generate_all=True,
     print("="*60)
     
     # Generate single-res figures
-    plot_chern_vs_test_grid_size(res_val, p_val, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
+    # plot_chern_vs_test_grid_size(res_val, p_val, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
     plot_parameters_vs_layer(res_val, p_val)
     plot_energy_vs_cycles(res_val, p_val, max_cycles=20, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
     plot_energy_heatmap_train(res_val, p_val, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
     plot_energy_heatmap_test(res_val, p_val, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
+    plot_gap_heatmap_train(res_val, p_val, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
+    plot_gap_heatmap_test(res_val, p_val, Jx=Jx, Jy=Jy, Jz=Jz, kappa=kappa)
     
     # Generate multi-res figures (if requested)
     # Use combined function to avoid redundant computation

@@ -235,8 +235,198 @@ def chern_from_spdm_with_threshold_eigenvalues(
 
 
 
+def chern_fhs_from_spdm(
+    rho,
+    thresh=0.5,
+    return_diagnostics=False
+):
+    """
+    Compute integer Chern number using the Fukui-Hatsugai-Suzuki (FHS) method.
+    
+    This method extracts the occupied subspace from a single-particle density matrix
+    using eigenvalue thresholding, then computes the lattice Chern number via
+    U(1) link variables and plaquette phases.
+    
+    The method is gauge-invariant and converges to the integer Chern number
+    as the k-grid is refined, provided there is a clear gap between occupied
+    and empty bands.
+    
+    Parameters
+    ----------
+    rho : ndarray, shape (Nx, Ny, M, M)
+        Hermitian positive semidefinite single-particle density matrices
+        on a 2D momentum grid. Eigenvalues should be in [0,1].
+        Expected to have n_occ "full" bands (eigenvalues > thresh) and
+        M - n_occ "empty" bands (eigenvalues < thresh) at each k-point.
+    thresh : float, default=0.5
+        Eigenvalue threshold to distinguish occupied from empty bands.
+        Bands with eigenvalue > thresh are considered occupied.
+    return_diagnostics : bool, default=False
+        If True, return additional diagnostic information including:
+        - plaquette flux grid
+        - minimum occupation gap across all k-points
+        - occupation counts
+        
+    Returns
+    -------
+    chern : float
+        The computed Chern number (close to integer for clean systems).
+    diagnostics : dict, optional
+        If return_diagnostics=True, contains:
+        - 'flux': ndarray (Nx, Ny), plaquette phases in (-π, π]
+        - 'min_gap': float, minimum gap between lowest occupied and 
+                     highest empty eigenvalue across all k
+        - 'n_occ': int, number of occupied bands
+        - 'gap_at_k': ndarray (Nx, Ny), occupation gap at each k-point
+        
+    Raises
+    ------
+    AssertionError
+        If the number of occupied bands differs across k-points.
+        
+    Notes
+    -----
+    The FHS method works as follows:
+    1. At each k, diagonalize ρ(k) and select eigenvectors with eigenvalue > thresh
+       as the occupied frame Ψ(k) of shape (M, n_occ).
+    2. Compute overlap matrices M_x(k) = Ψ†(k) Ψ(k+x̂), M_y(k) = Ψ†(k) Ψ(k+ŷ)
+    3. Extract U(1) link variables: U_x(k) = det(M̃_x)/|det(M̃_x)| where M̃ is the
+       unitary part of M (from polar decomposition).
+    4. Compute plaquette flux: F(k) = Arg[U_x(k) U_y(k+x̂) U_x(k+ŷ)^-1 U_y(k)^-1]
+    5. Sum: C = (1/2π) Σ_k F(k)
+    
+    References
+    ----------
+    Fukui, Hatsugai, Suzuki, J. Phys. Soc. Jpn. 74, 1674 (2005)
+    """
+    assert rho.ndim == 4 and rho.shape[2] == rho.shape[3], \
+        f"rho must be shape (Nx, Ny, M, M), got {rho.shape}"
+    Nx, Ny, M, _ = rho.shape
+    
+    # First pass: diagonalize all k-points and count occupied bands
+    evals_grid = np.zeros((Nx, Ny, M), dtype=float)
+    evecs_grid = np.zeros((Nx, Ny, M, M), dtype=complex)
+    n_occ_grid = np.zeros((Nx, Ny), dtype=int)
+    
+    for ix in range(Nx):
+        for iy in range(Ny):
+            # Hermitize for numerical stability
+            rho_k = 0.5 * (rho[ix, iy] + rho[ix, iy].conj().T)
+            w, V = np.linalg.eigh(rho_k)  # eigenvalues in ascending order
+            # Store in descending order (largest eigenvalue first)
+            evals_grid[ix, iy] = w[::-1]
+            evecs_grid[ix, iy] = V[:, ::-1]
+            n_occ_grid[ix, iy] = np.count_nonzero(w > thresh)
+    
+    # Assert uniform occupied dimension across all k-points
+    n_occ = n_occ_grid[0, 0]
+    assert np.all(n_occ_grid == n_occ), \
+        f"Number of occupied bands must be the same at all k-points. " \
+        f"Found counts ranging from {n_occ_grid.min()} to {n_occ_grid.max()}. " \
+        f"Adjust threshold (currently {thresh}) or check your density matrix."
+    
+    assert n_occ > 0, \
+        f"No eigenvalues > {thresh} found. Lower threshold or check density matrix."
+    assert n_occ < M, \
+        f"All eigenvalues > {thresh}. Raise threshold or check density matrix."
+    
+    # Compute occupation gap at each k-point: gap = (lowest occupied) - (highest empty)
+    # evals_grid is sorted descending, so occupied are indices 0:n_occ, empty are n_occ:M
+    gap_at_k = evals_grid[:, :, n_occ - 1] - evals_grid[:, :, n_occ]
+    min_gap = gap_at_k.min()
+    
+    # Build occupied frames: Ψ(k) is (M, n_occ) matrix of occupied eigenvectors
+    # Already sorted by descending eigenvalue
+    frames = evecs_grid[:, :, :, :n_occ]  # shape (Nx, Ny, M, n_occ)
+    
+    def polar_unitary(X):
+        """Extract unitary factor from polar decomposition via SVD."""
+        U, _, Vh = np.linalg.svd(X, full_matrices=False)
+        return U @ Vh
+    
+    def u1_link(M_overlap):
+        """
+        Compute U(1) link variable from overlap matrix.
+        U = det(M̃) / |det(M̃)| where M̃ is the unitary part of M.
+        """
+        M_unitary = polar_unitary(M_overlap)
+        d = np.linalg.det(M_unitary)
+        # Normalize to unit circle (handles numerical errors)
+        return d / np.abs(d) if np.abs(d) > 1e-12 else 1.0
+    
+    # Compute U(1) link variables in x and y directions
+    link_x = np.zeros((Nx, Ny), dtype=complex)
+    link_y = np.zeros((Nx, Ny), dtype=complex)
+    
+    for ix in range(Nx):
+        ix_next = (ix + 1) % Nx
+        for iy in range(Ny):
+            iy_next = (iy + 1) % Ny
+            
+            Psi_k = frames[ix, iy]                    # (M, n_occ)
+            Psi_kx = frames[ix_next, iy]              # (M, n_occ)
+            Psi_ky = frames[ix, iy_next]              # (M, n_occ)
+            
+            # Overlap matrices (n_occ x n_occ)
+            M_x = Psi_k.conj().T @ Psi_kx
+            M_y = Psi_k.conj().T @ Psi_ky
+            
+            link_x[ix, iy] = u1_link(M_x)
+            link_y[ix, iy] = u1_link(M_y)
+    
+    # Compute plaquette flux: F(k) = Arg[U_x(k) * U_y(k+x̂) * U_x(k+ŷ)^-1 * U_y(k)^-1]
+    # Since U_x, U_y are on the unit circle, U^-1 = U.conj()
+    flux = np.zeros((Nx, Ny), dtype=float)
+    total_flux = 0.0
+    
+    for ix in range(Nx):
+        ix_next = (ix + 1) % Nx
+        for iy in range(Ny):
+            iy_next = (iy + 1) % Ny
+            
+            # Plaquette product going counterclockwise: 
+            # k -> k+x̂ -> k+x̂+ŷ -> k+ŷ -> k
+            plaquette = (
+                link_x[ix, iy] *                    # k -> k+x̂
+                link_y[ix_next, iy] *               # k+x̂ -> k+x̂+ŷ  
+                link_x[ix, iy_next].conj() *        # k+ŷ -> k+x̂+ŷ (reversed, so conjugate)
+                link_y[ix, iy].conj()               # k -> k+ŷ (reversed, so conjugate)
+            )
+            
+            phase = np.angle(plaquette)  # in (-π, π]
+            flux[ix, iy] = phase
+            total_flux += phase
+    
+    chern = total_flux / (2.0 * np.pi)
+    
+    if return_diagnostics:
+        diagnostics = {
+            'flux': flux,
+            'min_gap': min_gap,
+            'n_occ': n_occ,
+            'gap_at_k': gap_at_k,
+        }
+        return chern, diagnostics
+    
+    return chern
+
+
 if __name__ == "__main__":
+    # Test with Qi-Wu-Zhang model (should give Chern = -1 for m = -1)
     single_particle_dm = qwx_projector_grid(41, 41, m=-1.0)
-    C = chern_from_mixed_spdm(
-        single_particle_dm)
-    print("Chern =", C)
+    
+    print("Testing different Chern number methods on QWZ model (m=-1, expect C=-1):")
+    print("-" * 60)
+    
+    C1 = chern_from_mixed_spdm(single_particle_dm)
+    print(f"chern_from_mixed_spdm:                    C = {C1:.6f}")
+    
+    C2 = get_chern_number_from_single_particle_dm(single_particle_dm)
+    print(f"get_chern_number_from_single_particle_dm: C = {C2:.6f}")
+    
+    C3 = chern_from_spdm_with_threshold_eigenvalues(single_particle_dm)
+    print(f"chern_from_spdm_with_threshold_eigenvalues: C = {C3:.6f}")
+    
+    C4, diag = chern_fhs_from_spdm(single_particle_dm, return_diagnostics=True)
+    print(f"chern_fhs_from_spdm (FHS method):         C = {C4:.6f}")
+    print(f"  -> n_occ = {diag['n_occ']}, min_gap = {diag['min_gap']:.4f}")
