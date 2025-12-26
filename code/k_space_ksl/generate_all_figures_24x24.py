@@ -636,7 +636,7 @@ def plot_gap_heatmap(res_val=3, p_val=5, grid_type='train', Jx=JX, Jy=JY, Jz=JZ,
             eigenvalues = np.linalg.eigvalsh(H_system)
             
             # Find smallest positive eigenvalue (spectral gap)
-            positive_eigenvalues = eigenvalues[eigenvalues > 1e-10]
+            positive_eigenvalues = eigenvalues[eigenvalues >= 0.0]
             if len(positive_eigenvalues) > 0:
                 gap_at_k[i_kx, i_ky] = np.min(positive_eigenvalues)
             else:
